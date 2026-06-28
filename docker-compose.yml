@@ -1,0 +1,23 @@
+# Local development database. Start with: docker compose up -d db
+# Matches DATABASE_URL in .env (postgresql://cstu:cstu@localhost:5432/cstu_dev).
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: cstu-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cstu
+      POSTGRES_PASSWORD: cstu
+      POSTGRES_DB: cstu_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - cstu_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cstu -d cstu_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  cstu_pgdata:

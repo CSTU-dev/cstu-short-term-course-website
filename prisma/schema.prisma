@@ -1,0 +1,461 @@
+// ============================================================
+// CSTU Online Course Platform — Prisma schema
+// PostgreSQL + Prisma 7 (prisma-client generator) + Auth.js v5
+// ============================================================
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ------------------------------------------------------------
+// ENUMS
+// ------------------------------------------------------------
+
+/// Platform role. Single User table + role enum (one account, one role).
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  USER
+}
+
+/// Enrollment/payment status. Deliberately an enum (never a boolean) so it can grow.
+enum EnrollmentStatus {
+  PENDING // created, not yet paid
+  PAID // fully paid
+  REFUND_REQUESTED // refund initiated, not yet processed
+  PARTIALLY_REFUNDED // manually recorded partial refund
+  REFUNDED // fully refunded
+  CANCELLED // abandoned before payment (optional)
+}
+
+/// Third-party payment transaction (Stripe stub) direction.
+enum TransactionType {
+  PAYMENT
+  REFUND
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+/// Commission lifecycle. Withdrawal is reserved for later but modeled now.
+enum CommissionStatus {
+  PENDING // sale recorded, not yet confirmed / within refund window
+  EARNED // confirmed, counts toward totals
+  REVERSED // fully clawed back due to refund
+  ADJUSTED // reduced by a partial refund (positive balance remains)
+  WITHDRAWN // paid out (reserved)
+}
+
+/// Referral click / conversion event type (for analytics + aggregation).
+enum ReferralEventType {
+  CLICK
+  CONVERSION
+}
+
+/// Audit log action types.
+enum AuditAction {
+  COURSE_CREATE
+  COURSE_UPDATE
+  COURSE_ENABLE_TOGGLE
+  COURSE_ADMIN_ASSIGN
+  COURSE_ADMIN_UNASSIGN
+  SECTION_CREATE
+  SECTION_UPDATE
+  SECTION_DELETE
+  SECTION_REORDER
+  ENROLLMENT_CREATE
+  PAYMENT_RECORDED
+  REFUND_RECORDED
+  COMMISSION_REVERSED
+  ROLE_CHANGE
+  ADMIN_INVITE_SENT
+  ADMIN_INVITE_ACCEPTED
+  REFERRAL_CODE_CREATE
+  USER_PROFILE_UPDATE
+}
+
+// ------------------------------------------------------------
+// AUTH.JS (NextAuth v5) standard models + platform extensions
+// ------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  // Auth.js standard fields
+  email         String    @unique
+  emailVerified DateTime?
+  name          String?
+  image         String?
+  // Email + password login: hashed password (null for Google-only users)
+  passwordHash  String?
+
+  // Platform role: one account, one role
+  role Role @default(USER)
+
+  // Profile (my/info), all optional, kept separate from enrollment snapshots
+  profileName    String?
+  profilePhone   String?
+  profileWechat  String?
+  preferredEmail String?
+
+  // Auth.js relations
+  accounts Account[]
+  sessions Session[]
+
+  // Platform relations
+  enrollments       Enrollment[]
+  referralCodes     ReferralCode[]
+  referralCodeEdits ReferralCodeEdit[]
+  commissions       Commission[]       @relation("CommissionBeneficiary")
+  assignedCourses   CourseAssignment[] @relation("AdminAssignment")
+  refundsHandled    Refund[]           @relation("RefundOperator")
+  auditLogs         AuditLog[]         @relation("AuditActor")
+  invitesSent       AdminInvite[]      @relation("InviteCreatedBy")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([role])
+}
+
+/// Auth.js OAuth provider account (Google SSO, etc.).
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ------------------------------------------------------------
+// Admin invites (cold start: superAdmin via seed; admin via email invite)
+// ------------------------------------------------------------
+
+/// Invite a user to become an admin by email. Accepting promotes role to ADMIN.
+model AdminInvite {
+  id         String    @id @default(cuid())
+  email      String // invitee email
+  role       Role      @default(ADMIN) // granted role (usually ADMIN)
+  tokenHash  String    @unique // hash of the one-time, URL-safe token
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  acceptedBy String? // userId bound after acceptance
+  // Optional course to assign on acceptance (admin added from a course page)
+  courseId   String?
+
+  createdById String
+  createdBy   User   @relation("InviteCreatedBy", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
+}
+
+// ------------------------------------------------------------
+// Course / Section / Assignment
+// ------------------------------------------------------------
+
+model Course {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique // custom route address, unique
+  startAt     DateTime
+  endAt       DateTime
+  isOffline   Boolean  @default(false)
+  priceAmount Decimal  @db.Decimal(10, 2)
+  currency    String   @default("USD")
+  enabled     Boolean  @default(false) // new courses default off
+
+  // Custom course detail page content (rich text / structured JSON placeholder)
+  detailContent Json?
+
+  sections      Section[]
+  assignments   CourseAssignment[]
+  enrollments   Enrollment[]
+  referralStats ReferralCourseStat[]
+  commissions   Commission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([enabled, createdAt]) // /home: latest added + enabled
+}
+
+model Section {
+  id       String @id @default(cuid())
+  courseId String
+  title    String
+  videoUrl String
+  position Int // ordering key within a course
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([courseId, position])
+  @@index([courseId])
+}
+
+/// Course <-> admin many-to-many (explicit join table for extra fields).
+model CourseAssignment {
+  id       String @id @default(cuid())
+  courseId String
+  adminId  String
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  admin  User   @relation("AdminAssignment", fields: [adminId], references: [id], onDelete: Cascade)
+
+  assignedAt DateTime @default(now())
+
+  @@unique([courseId, adminId])
+  @@index([adminId])
+  @@index([courseId])
+}
+
+// ------------------------------------------------------------
+// Enrollment / Transaction / Refund
+// ------------------------------------------------------------
+
+model Enrollment {
+  id       String           @id @default(cuid())
+  userId   String
+  courseId String
+  status   EnrollmentStatus @default(PENDING)
+
+  // Enrollment snapshot (this enrollment only; never written back to User profile)
+  snapshotName   String?
+  snapshotPhone  String?
+  snapshotWechat String?
+  snapshotEmail  String?
+  note           String?
+
+  // Money (money is truth, status is derived)
+  listPrice      Decimal @db.Decimal(10, 2) // course price snapshot at enroll time
+  discountAmount Decimal @default(0) @db.Decimal(10, 2)
+  amountPaid     Decimal @default(0) @db.Decimal(10, 2)
+  amountRefunded Decimal @default(0) @db.Decimal(10, 2)
+  currency       String  @default("USD")
+
+  // Referral attribution (locked at conversion)
+  referralCodeId String?
+  referralCode   ReferralCode? @relation(fields: [referralCodeId], references: [id], onDelete: SetNull)
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Restrict)
+
+  transactions Transaction[]
+  refunds      Refund[]
+  commission   Commission?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, courseId])
+  @@index([courseId, status])
+  @@index([userId])
+  @@index([referralCodeId])
+}
+
+/// Third-party payment transaction ledger (Stripe stub reserved).
+model Transaction {
+  id           String            @id @default(cuid())
+  enrollmentId String
+  type         TransactionType   @default(PAYMENT)
+  status       TransactionStatus @default(PENDING)
+  amount       Decimal           @db.Decimal(10, 2)
+  currency     String            @default("USD")
+
+  provider   String? // "stripe" etc.
+  externalId String? // PaymentIntent id / external txn id
+  rawPayload Json? // webhook payload for reconciliation
+
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([provider, externalId]) // idempotency for webhook replays
+  @@index([enrollmentId])
+  @@index([status])
+}
+
+/// Refund record (v1: admin records manually, supports partial refunds).
+model Refund {
+  id           String  @id @default(cuid())
+  enrollmentId String
+  amount       Decimal @db.Decimal(10, 2)
+  currency     String  @default("USD")
+  reason       String?
+  operatorId   String // admin who performed it
+
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  operator   User       @relation("RefundOperator", fields: [operatorId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([enrollmentId])
+  @@index([operatorId])
+}
+
+// ------------------------------------------------------------
+// Referral / Commission
+// ------------------------------------------------------------
+
+/// Referral code: one user can own many; old codes stay valid forever.
+model ReferralCode {
+  id       String  @id @default(cuid())
+  userId   String
+  code     String  @unique // global, URL-safe
+  isActive Boolean @default(true) // current "primary" code used to build new links
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  enrollments Enrollment[]
+  events      ReferralEvent[]
+  commissions Commission[]
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, isActive])
+}
+
+/// Referral code change audit, for the "<= 3 edits per rolling 24h" rate limit.
+model ReferralCodeEdit {
+  id        String   @id @default(cuid())
+  userId    String
+  newCode   String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+/// Raw click/conversion events (detail rows, for audit + recompute).
+model ReferralEvent {
+  id             String            @id @default(cuid())
+  referralCodeId String
+  courseId       String?
+  type           ReferralEventType
+  enrollmentId   String?
+  visitorHash    String? // anonymous visitor fingerprint (click de-dup)
+  ipHash         String?
+  userAgent      String?
+
+  referralCode ReferralCode @relation(fields: [referralCodeId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([referralCodeId, type, createdAt])
+  @@index([courseId])
+  @@index([enrollmentId])
+}
+
+/// Materialized counters per (referrer user x course). Read-optimized.
+model ReferralCourseStat {
+  id              String  @id @default(cuid())
+  userId          String // referrer (aggregated across all their codes)
+  courseId        String
+  clicks          Int     @default(0)
+  conversions     Int     @default(0)
+  commissionTotal Decimal @default(0) @db.Decimal(12, 2) // net (after reversals)
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, courseId])
+  @@index([userId])
+}
+
+/// Commission: bound to a refundable enrollment; clawed back on refund.
+model Commission {
+  id             String           @id @default(cuid())
+  enrollmentId   String           @unique // 1:1, one sale -> one commission
+  beneficiaryId  String
+  referralCodeId String
+  courseId       String
+
+  status         CommissionStatus @default(PENDING)
+  rate           Decimal          @db.Decimal(5, 4) // rate snapshot, e.g. 0.1000
+  baseAmount     Decimal          @db.Decimal(10, 2) // commission base (= amount paid)
+  grossAmount    Decimal          @db.Decimal(10, 2)
+  reversedAmount Decimal          @default(0) @db.Decimal(10, 2)
+  netAmount      Decimal          @db.Decimal(10, 2) // gross - reversed (currently withdrawable)
+
+  withdrawableAt DateTime? // usually = course.endAt
+  withdrawnAt    DateTime?
+
+  enrollment   Enrollment   @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  beneficiary  User         @relation("CommissionBeneficiary", fields: [beneficiaryId], references: [id])
+  referralCode ReferralCode @relation(fields: [referralCodeId], references: [id])
+  course       Course       @relation(fields: [courseId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([beneficiaryId, status])
+  @@index([courseId])
+}
+
+// ------------------------------------------------------------
+// Audit log
+// ------------------------------------------------------------
+
+model AuditLog {
+  id         String      @id @default(cuid())
+  actorId    String? // operator (null for system/webhook)
+  action     AuditAction
+  entityType String // "Course" / "Enrollment" / "User" ...
+  entityId   String?
+  before     Json?
+  after      Json?
+  metadata   Json? // ip, requestId, reason, etc.
+  actor      User?       @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([entityType, entityId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+}
