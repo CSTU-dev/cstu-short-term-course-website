@@ -18,6 +18,19 @@ export function formatDateTime(date: Date | string) {
   }).format(new Date(date));
 }
 
+const ENROLLMENT_STATUS_LABELS: Record<string, string> = {
+  PENDING: "Unpaid",
+  PAID: "Paid",
+  REFUND_REQUESTED: "Refund requested",
+  PARTIALLY_REFUNDED: "Partially refunded",
+  REFUNDED: "Refunded",
+  CANCELLED: "Cancelled",
+};
+
+export function formatEnrollmentStatus(status: string): string {
+  return ENROLLMENT_STATUS_LABELS[status] ?? status;
+}
+
 /** Format a Date for an <input type="datetime-local"> value (local time). */
 export function toDateTimeLocal(date: Date | string) {
   const d = new Date(date);

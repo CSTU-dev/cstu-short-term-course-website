@@ -40,3 +40,17 @@ export function getCourseDetail(id: string) {
 export type CourseDetail = NonNullable<
   Awaited<ReturnType<typeof getCourseDetail>>
 >;
+
+/** Course detail for the admin view: ordered sections + enrolled students. */
+export function getAdminCourseDetail(courseId: string) {
+  return prisma.course.findUnique({
+    where: { id: courseId },
+    include: {
+      sections: { orderBy: { position: "asc" } },
+      enrollments: {
+        orderBy: { createdAt: "desc" },
+        include: { user: { select: { email: true } } },
+      },
+    },
+  });
+}
