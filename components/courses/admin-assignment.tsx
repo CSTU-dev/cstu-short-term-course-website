@@ -62,7 +62,7 @@ export function AdminAssignment({
           admins.map((admin) => (
             <li
               key={admin.adminId}
-              className="bg-card flex items-center justify-between rounded-lg border px-3 py-2"
+              className="bg-card flex items-center justify-between rounded-md border px-3 py-2"
             >
               <span className="text-sm">
                 {admin.name ? `${admin.name} · ` : ""}

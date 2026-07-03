@@ -28,7 +28,10 @@ export default async function ReferralsPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-10">
-      <h1 className="text-2xl font-semibold">Referrals</h1>
+      <div className="space-y-1.5">
+        <p className="eyebrow">My Account</p>
+        <h1 className="font-heading text-2xl font-bold">Referrals</h1>
+      </div>
 
       <div className="grid gap-6 sm:grid-cols-2">
         <Card>

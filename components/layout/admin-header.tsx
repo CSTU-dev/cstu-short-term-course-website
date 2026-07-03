@@ -18,21 +18,23 @@ export async function AdminHeader() {
       : "/admin/courses";
 
   return (
-    <header className="bg-primary text-primary-foreground border-b">
+    <header className="relative bg-primary text-primary-foreground">
+      <span className="absolute inset-x-0 bottom-0 h-px bg-white/20" />
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
         <div className="flex items-center gap-3">
-          <Logo
-            href={dashboardHref}
-            inverted
-            className="text-primary-foreground"
-          />
+          <Logo href={dashboardHref} inverted />
           {authed ? (
-            <span className="bg-primary-foreground/15 rounded px-2 py-0.5 text-xs font-medium">
+            <span className="rounded-full bg-white/15 px-2.5 py-0.5 font-mono text-[10px] tracking-[0.08em] uppercase">
               {label}
             </span>
           ) : null}
         </div>
-        {authed ? <LogoutButton variant="secondary" /> : null}
+        {authed ? (
+          <LogoutButton
+            variant="outline"
+            className="border-white/40 bg-transparent text-white hover:border-white/70 hover:bg-white/10 hover:text-white dark:text-white"
+          />
+        ) : null}
       </div>
     </header>
   );

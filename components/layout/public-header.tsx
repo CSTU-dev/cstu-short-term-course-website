@@ -16,7 +16,7 @@ const BASE_LINKS: NavLink[] = [
 ];
 
 const linkClass =
-  "text-muted-foreground hover:text-foreground rounded-md px-3 py-2 text-sm font-medium transition-colors";
+  "text-ink/80 hover:text-primary border-b-2 border-transparent hover:border-primary px-3 py-5 text-sm font-medium transition-colors";
 
 export async function PublicHeader() {
   const session = await auth();
@@ -58,7 +58,7 @@ export async function PublicHeader() {
   ];
 
   return (
-    <header className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky top-0 z-40 border-b backdrop-blur">
+    <header className="bg-card/95 supports-[backdrop-filter]:bg-card/80 sticky top-0 z-40 border-b shadow-sm backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
         <div className="flex items-center gap-6">
           <Logo />

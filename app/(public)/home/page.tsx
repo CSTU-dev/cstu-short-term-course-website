@@ -2,9 +2,16 @@ import Link from "next/link";
 
 import { CourseCard, type PublicCourse } from "@/components/courses/course-card";
 import { buttonVariants } from "@/components/ui/button";
+import { Eyebrow, PageTitle, SectionTitle } from "@/components/ui/typography";
 import { hasBothModes, lowestPrice } from "@/lib/courses";
 import { getEnabledCourses } from "@/lib/data/public.queries";
 import { formatCurrency, formatDate } from "@/lib/format";
+
+const STATS = [
+  { value: "#1", label: "Location for Tech Jobs" },
+  { value: "STEM", label: "Designated Programs" },
+  { value: "98%", label: "Career Placement Rate" },
+];
 
 function toPublic(course: {
   id: string;
@@ -38,57 +45,90 @@ export default async function HomePage() {
 
   return (
     <div>
-      <section className="bg-primary text-primary-foreground">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:py-24">
-          <p className="text-primary-foreground/70 text-sm font-medium tracking-wide uppercase">
-            California Science and Technology University
-          </p>
-          <h1 className="mt-3 max-w-2xl text-3xl font-bold tracking-tight sm:text-5xl">
+      {/* ── HERO ── */}
+      <section className="relative overflow-hidden bg-ink">
+        <span className="absolute inset-x-0 top-0 h-1 bg-primary" />
+        <div
+          className="pointer-events-none absolute -top-24 -right-24 size-[420px] rounded-full opacity-70"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(168,0,0,0.35) 0%, transparent 70%)",
+          }}
+        />
+        <div className="relative mx-auto max-w-6xl px-4 py-20 sm:py-28">
+          <span className="inline-flex items-center gap-2 rounded-md bg-primary px-3.5 py-1.5 font-mono text-[11px] font-medium tracking-[0.1em] text-white uppercase">
+            Enrollment Open · {new Date().getFullYear()}
+          </span>
+          <PageTitle className="mt-6 max-w-3xl text-cream">
             Advance your career with professional CSTU courses
-          </h1>
+          </PageTitle>
+          <p className="mt-5 max-w-xl text-lg leading-relaxed text-neutral-400">
+            Industry-aligned short courses and continuing education from
+            California Science &amp; Technology University — learn online or on
+            campus in Silicon Valley.
+          </p>
+
           {featured ? (
-            <div className="mt-8 max-w-xl rounded-xl bg-white/10 p-6 backdrop-blur">
-              <p className="text-primary-foreground/70 text-xs uppercase">
-                Latest course
-              </p>
-              <h2 className="mt-1 text-xl font-semibold">{featured.title}</h2>
-              <p className="text-primary-foreground/80 mt-1 text-sm">
+            <div className="mt-10 max-w-xl rounded-md border border-neutral-700 bg-neutral-800/60 p-6 backdrop-blur">
+              <Eyebrow className="text-gold-300">Latest course</Eyebrow>
+              <h2 className="font-heading mt-2 text-xl font-bold text-cream">
+                {featured.title}
+              </h2>
+              <p className="mt-1 font-mono text-xs tracking-[0.04em] text-neutral-400">
                 {formatDate(featured.startAt)} – {formatDate(featured.endAt)} ·{" "}
                 {hasBothModes(featured) ? "From " : ""}
                 {formatCurrency(lowestPrice(featured) ?? 0)}
               </p>
-              <div className="mt-4 flex gap-2">
-                <Link
-                  href={`/courses/${featured.slug}`}
-                  className={buttonVariants({ variant: "secondary" })}
-                >
-                  View details
-                </Link>
+              <div className="mt-5 flex flex-wrap gap-3">
                 <Link
                   href={`/enroll?courseId=${featured.id}`}
-                  className={buttonVariants({ variant: "outline" })}
+                  className={buttonVariants()}
                 >
-                  Enroll
+                  Enroll now →
+                </Link>
+                <Link
+                  href={`/courses/${featured.slug}`}
+                  className={buttonVariants({ variant: "secondary"})}
+                >
+                  View details
                 </Link>
               </div>
             </div>
           ) : (
-            <p className="text-primary-foreground/80 mt-6">
-              New courses are coming soon.
-            </p>
+            <p className="mt-6 text-neutral-400">New courses are coming soon.</p>
           )}
         </div>
       </section>
 
+      {/* ── STATS BAR ── */}
+      <div className="border-b bg-card">
+        <div className="mx-auto grid max-w-6xl grid-cols-1 divide-y sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          {STATS.map((stat) => (
+            <div key={stat.label} className="px-6 py-8 text-center">
+              <div className="font-heading text-4xl font-bold text-primary">
+                {stat.value}
+              </div>
+              <div className="mt-1.5 font-mono text-[10px] tracking-[0.1em] text-muted-foreground uppercase">
+                {stat.label}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── MORE COURSES ── */}
       {rest.length > 0 ? (
-        <section className="mx-auto max-w-6xl px-4 py-12">
-          <div className="mb-6 flex items-center justify-between">
-            <h2 className="text-2xl font-semibold">More courses</h2>
+        <section className="mx-auto max-w-6xl px-4 py-16">
+          <div className="mb-8 flex items-end justify-between gap-4">
+            <div className="space-y-2">
+              <Eyebrow>Continuing Education</Eyebrow>
+              <SectionTitle>Explore our courses</SectionTitle>
+            </div>
             <Link
               href="/courses"
-              className={buttonVariants({ variant: "ghost" })}
+              className="font-mono text-[11px] font-medium tracking-[0.08em] text-primary uppercase transition-opacity hover:opacity-65"
             >
-              Browse all
+              View all →
             </Link>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

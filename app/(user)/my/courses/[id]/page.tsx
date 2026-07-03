@@ -64,7 +64,7 @@ export default async function MyCourseDetailPage({
       </Card>
 
       {isPending ? (
-        <div className="flex items-center justify-between rounded-lg border p-4">
+        <div className="flex items-center justify-between rounded-md border p-4">
           <p className="text-sm">This enrollment is awaiting payment.</p>
           <Link
             href={`/enroll?courseId=${course.id}`}

@@ -16,27 +16,27 @@ export function DemoDetail({ course }: CustomDetailProps) {
   return (
     <div>
       {/* Hero */}
-      <section className="bg-primary text-primary-foreground">
+      <section className="relative overflow-hidden bg-primary text-primary-foreground">
+        <span className="absolute inset-x-0 top-0 h-1 bg-ink/40" />
         <div className="mx-auto max-w-4xl px-4 py-16 sm:py-20">
           <div className="flex flex-wrap items-center gap-2">
             {availableModes(course).map((mode) => (
               <Badge
                 key={mode}
-                variant="secondary"
-                className="bg-white/15 text-primary-foreground"
+                className="border-transparent bg-white text-primary"
               >
                 {COURSE_MODE_LABELS[mode]}
               </Badge>
             ))}
           </div>
-          <h1 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
+          <h1 className="font-heading mt-5 text-4xl font-bold tracking-tight text-cream sm:text-5xl">
             {course.title}
           </h1>
-          <p className="text-primary-foreground/80 mt-3 text-lg">
+          <p className="mt-4 max-w-xl text-lg text-primary-foreground/85">
             A hands-on program you can take online or in person — learn by
             building, with guidance every step of the way.
           </p>
-          <p className="text-primary-foreground/70 mt-2 text-sm">
+          <p className="mt-3 font-mono text-xs tracking-[0.03em] text-primary-foreground/70">
             {formatDateTime(course.startAt)} – {formatDateTime(course.endAt)}
           </p>
         </div>
@@ -59,7 +59,7 @@ export function DemoDetail({ course }: CustomDetailProps) {
               body: "Get feedback from instructors throughout the course.",
             },
           ].map((f) => (
-            <div key={f.title} className="rounded-xl border p-5">
+            <div key={f.title} className="rounded-md border p-5">
               <h3 className="font-semibold">{f.title}</h3>
               <p className="text-muted-foreground mt-1 text-sm">{f.body}</p>
             </div>

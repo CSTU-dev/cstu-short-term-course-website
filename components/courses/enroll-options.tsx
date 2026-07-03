@@ -34,7 +34,7 @@ export function EnrollOptions({
           return (
             <div
               key={mode}
-              className="flex flex-col gap-3 rounded-xl border p-5"
+              className="flex flex-col gap-3 rounded-md border p-5"
             >
               <div>
                 <p className="text-muted-foreground text-sm font-medium">

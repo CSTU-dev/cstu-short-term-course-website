@@ -83,7 +83,7 @@ function SectionRow({
   }
 
   return (
-    <div className="bg-card flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-end">
+    <div className="bg-card flex flex-col gap-2 rounded-md border p-3 sm:flex-row sm:items-end">
       <div className="flex-1 space-y-1">
         <Label className="text-xs">Title</Label>
         <Input value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -138,7 +138,7 @@ function AddSection({ courseId }: { courseId: string }) {
   return (
     <form
       onSubmit={add}
-      className="bg-muted/30 flex flex-col gap-2 rounded-lg border border-dashed p-3 sm:flex-row sm:items-end"
+      className="bg-muted/30 flex flex-col gap-2 rounded-md border border-dashed p-3 sm:flex-row sm:items-end"
     >
       <div className="flex-1 space-y-1">
         <Label className="text-xs">New section title</Label>

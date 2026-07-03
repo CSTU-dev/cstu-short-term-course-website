@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { Logo } from "./logo";
+import { CstuSeal } from "./cstu-seal";
 
 const courseLinks = [
   { label: "All courses", href: "/courses" },
@@ -17,11 +17,14 @@ export function SiteFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="bg-muted/30 border-t">
-      <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-10 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="space-y-3">
-          <Logo />
-          <p className="text-muted-foreground max-w-xs text-sm">
+    <footer className="bg-neutral-800 text-neutral-400 border-t-4 border-primary">
+      <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-16 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 text-cream">
+            <CstuSeal className="size-10" />
+            <span className="font-heading text-xl font-bold text-cream">CSTU</span>
+          </div>
+          <p className="max-w-xs text-sm leading-relaxed text-neutral-500">
             California Science and Technology University — professional courses
             and continuing education.
           </p>
@@ -29,10 +32,19 @@ export function SiteFooter() {
 
         <FooterColumn title="Courses" links={courseLinks} />
 
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold">Contact</h3>
-          <ul className="text-muted-foreground space-y-1 text-sm">
-            <li>admissions@cstu.edu</li>
+        <div className="space-y-4">
+          <h3 className="font-mono text-[10px] tracking-[0.12em] text-neutral-400 uppercase">
+            Contact
+          </h3>
+          <ul className="space-y-2 text-sm text-neutral-500">
+            <li>
+              <a
+                href="mailto:admissions@cstu.edu"
+                className="text-primary transition-opacity hover:opacity-75"
+              >
+                admissions@cstu.edu
+              </a>
+            </li>
             <li>+1 (000) 000-0000</li>
             <li>1 Education Way, Milpitas, CA</li>
           </ul>
@@ -41,8 +53,13 @@ export function SiteFooter() {
         <FooterColumn title="Legal" links={legalLinks} />
       </div>
 
-      <div className="text-muted-foreground border-t py-4 text-center text-xs">
-        © {year} CSTU. All rights reserved.
+      <div className="border-t border-neutral-700">
+        <div className="mx-auto max-w-6xl px-4 py-6">
+          <p className="font-mono text-[10px] tracking-[0.06em] text-neutral-600 uppercase">
+            © {year} California Science &amp; Technology University. All rights
+            reserved.
+          </p>
+        </div>
       </div>
     </footer>
   );
@@ -56,14 +73,16 @@ function FooterColumn({
   links: { label: string; href: string }[];
 }) {
   return (
-    <div className="space-y-3">
-      <h3 className="text-sm font-semibold">{title}</h3>
-      <ul className="space-y-1 text-sm">
+    <div className="space-y-4">
+      <h3 className="font-mono text-[10px] tracking-[0.12em] text-neutral-400 uppercase">
+        {title}
+      </h3>
+      <ul className="space-y-2 text-sm">
         {links.map((link) => (
           <li key={link.href}>
             <Link
               href={link.href}
-              className="text-muted-foreground hover:text-foreground transition-colors"
+              className="text-neutral-500 transition-colors hover:text-cream"
             >
               {link.label}
             </Link>

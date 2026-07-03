@@ -4,135 +4,290 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ============================================================================
+   CSTU DESIGN SYSTEM V2 — TOKEN FOUNDATION
+   California Science & Technology University
+
+   Layers:
+   1. Primitive tokens  — raw brand palette, spacing, radius, shadows (:root)
+   2. Semantic tokens   — role-based aliases consumed by components (:root/.dark)
+   3. Tailwind theme     — exposes tokens as utilities via @theme inline
+   ============================================================================ */
+
+/* ── 1. PRIMITIVE TOKENS ─────────────────────────────────────────────────── */
+:root {
+  /* Core palette */
+  --cstu-cream: #fbf8f2;
+  --cstu-ink: #1f1e1c;
+  --cstu-body: #46433e;
+
+  /* Red scale */
+  --cstu-red-50: #fff0f0;
+  --cstu-red-100: #ffd6d6;
+  --cstu-red-200: #ffaaaa;
+  --cstu-red-300: #ff7070;
+  --cstu-red-400: #e03030;
+  --cstu-red-500: #a80000;
+  --cstu-red-600: #8a0000;
+  --cstu-red-700: #6b0000;
+  --cstu-red-800: #4d0000;
+  --cstu-red-900: #2e0000;
+
+  /* Neutral scale (warm) */
+  --cstu-neutral-50: #faf9f7;
+  --cstu-neutral-100: #f2efe9;
+  --cstu-neutral-200: #e2ddd4;
+  --cstu-neutral-300: #c8c1b5;
+  --cstu-neutral-400: #a09890;
+  --cstu-neutral-500: #7a726a;
+  --cstu-neutral-600: #46433e;
+  --cstu-neutral-700: #2e2d2a;
+  --cstu-neutral-800: #1f1e1c;
+  --cstu-neutral-900: #111110;
+
+  /* Gold scale */
+  --cstu-gold-50: #fdf8ef;
+  --cstu-gold-100: #f9edcf;
+  --cstu-gold-200: #f0d49a;
+  --cstu-gold-300: #d9a84e;
+  --cstu-gold-400: #be8a3d;
+  --cstu-gold-500: #9a6e2b;
+  --cstu-gold-600: #7a541c;
+
+  /* Radius scale */
+  --radius: 0.5rem;
+
+  /* Shadows */
+  --shadow-2xs: 0 1px 2px rgba(31, 30, 28, 0.05);
+  --shadow-xs: 0 1px 2px rgba(31, 30, 28, 0.06);
+  --shadow-sm: 0 1px 3px rgba(31, 30, 28, 0.08), 0 1px 2px rgba(31, 30, 28, 0.06);
+  --shadow: 0 1px 3px rgba(31, 30, 28, 0.08), 0 1px 2px rgba(31, 30, 28, 0.06);
+  --shadow-md: 0 4px 12px rgba(31, 30, 28, 0.1), 0 2px 4px rgba(31, 30, 28, 0.06);
+  --shadow-lg: 0 12px 32px rgba(31, 30, 28, 0.12), 0 4px 8px rgba(31, 30, 28, 0.06);
+  --shadow-xl: 0 20px 48px rgba(31, 30, 28, 0.16), 0 8px 16px rgba(31, 30, 28, 0.08);
+}
+
+/* ── 2. SEMANTIC TOKENS — LIGHT ──────────────────────────────────────────── */
+:root {
+  --background: var(--cstu-cream);
+  --foreground: var(--cstu-ink);
+
+  --card: #ffffff;
+  --card-foreground: var(--cstu-ink);
+  --popover: #ffffff;
+  --popover-foreground: var(--cstu-ink);
+
+  /* Brand red — primary interactive color */
+  --primary: var(--cstu-red-500);
+  --primary-foreground: #ffffff;
+
+  /* Gold — accent for highlights, not primary actions */
+  --brand: var(--cstu-gold-400);
+  --brand-foreground: var(--cstu-gold-600);
+
+  --secondary: var(--cstu-neutral-100);
+  --secondary-foreground: var(--cstu-ink);
+  --muted: var(--cstu-neutral-100);
+  --muted-foreground: var(--cstu-neutral-500);
+  --accent: var(--cstu-red-50);
+  --accent-foreground: var(--cstu-red-600);
+
+  --destructive: var(--cstu-red-500);
+  --destructive-foreground: #ffffff;
+
+  --border: var(--cstu-neutral-200);
+  --input: var(--cstu-neutral-200);
+  --ring: var(--cstu-red-500);
+
+  /* Charts — brand-led categorical palette */
+  --chart-1: var(--cstu-red-500);
+  --chart-2: var(--cstu-gold-400);
+  --chart-3: var(--cstu-neutral-500);
+  --chart-4: var(--cstu-red-300);
+  --chart-5: var(--cstu-gold-600);
+
+  /* Sidebar */
+  --sidebar: var(--cstu-neutral-50);
+  --sidebar-foreground: var(--cstu-ink);
+  --sidebar-primary: var(--cstu-red-500);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--cstu-red-50);
+  --sidebar-accent-foreground: var(--cstu-red-600);
+  --sidebar-border: var(--cstu-neutral-200);
+  --sidebar-ring: var(--cstu-red-500);
+}
+
+/* ── 2. SEMANTIC TOKENS — DARK ───────────────────────────────────────────── */
+.dark {
+  --background: var(--cstu-neutral-900);
+  --foreground: var(--cstu-cream);
+
+  --card: var(--cstu-neutral-800);
+  --card-foreground: var(--cstu-cream);
+  --popover: var(--cstu-neutral-800);
+  --popover-foreground: var(--cstu-cream);
+
+  --primary: var(--cstu-red-500);
+  --primary-foreground: #ffffff;
+
+  --brand: var(--cstu-gold-300);
+  --brand-foreground: var(--cstu-ink);
+
+  --secondary: var(--cstu-neutral-700);
+  --secondary-foreground: var(--cstu-cream);
+  --muted: var(--cstu-neutral-700);
+  --muted-foreground: var(--cstu-neutral-400);
+  --accent: var(--cstu-neutral-700);
+  --accent-foreground: var(--cstu-cream);
+
+  --destructive: var(--cstu-red-400);
+  --destructive-foreground: #ffffff;
+
+  --border: color-mix(in oklab, var(--cstu-cream) 12%, transparent);
+  --input: color-mix(in oklab, var(--cstu-cream) 16%, transparent);
+  --ring: var(--cstu-red-400);
+
+  --chart-1: var(--cstu-red-400);
+  --chart-2: var(--cstu-gold-300);
+  --chart-3: var(--cstu-neutral-400);
+  --chart-4: var(--cstu-red-200);
+  --chart-5: var(--cstu-gold-200);
+
+  --sidebar: var(--cstu-neutral-800);
+  --sidebar-foreground: var(--cstu-cream);
+  --sidebar-primary: var(--cstu-red-500);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--cstu-neutral-700);
+  --sidebar-accent-foreground: var(--cstu-cream);
+  --sidebar-border: color-mix(in oklab, var(--cstu-cream) 12%, transparent);
+  --sidebar-ring: var(--cstu-red-400);
+}
+
+/* ── 3. TAILWIND THEME MAPPING ───────────────────────────────────────────── */
 @theme inline {
+  /* Fonts */
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-plex-serif), ui-serif, Georgia, serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --font-heading: var(--font-plex-serif), ui-serif, Georgia, serif;
+
+  /* Semantic colors */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Brand palette — direct utilities (bg-cream, text-ink, bg-red-500, …) */
+  --color-cream: var(--cstu-cream);
+  --color-ink: var(--cstu-ink);
+  --color-body: var(--cstu-body);
+
+  --color-red-50: var(--cstu-red-50);
+  --color-red-100: var(--cstu-red-100);
+  --color-red-200: var(--cstu-red-200);
+  --color-red-300: var(--cstu-red-300);
+  --color-red-400: var(--cstu-red-400);
+  --color-red-500: var(--cstu-red-500);
+  --color-red-600: var(--cstu-red-600);
+  --color-red-700: var(--cstu-red-700);
+  --color-red-800: var(--cstu-red-800);
+  --color-red-900: var(--cstu-red-900);
+
+  --color-gold-50: var(--cstu-gold-50);
+  --color-gold-100: var(--cstu-gold-100);
+  --color-gold-200: var(--cstu-gold-200);
+  --color-gold-300: var(--cstu-gold-300);
+  --color-gold-400: var(--cstu-gold-400);
+  --color-gold-500: var(--cstu-gold-500);
+  --color-gold-600: var(--cstu-gold-600);
+
+  --color-neutral-50: var(--cstu-neutral-50);
+  --color-neutral-100: var(--cstu-neutral-100);
+  --color-neutral-200: var(--cstu-neutral-200);
+  --color-neutral-300: var(--cstu-neutral-300);
+  --color-neutral-400: var(--cstu-neutral-400);
+  --color-neutral-500: var(--cstu-neutral-500);
+  --color-neutral-600: var(--cstu-neutral-600);
+  --color-neutral-700: var(--cstu-neutral-700);
+  --color-neutral-800: var(--cstu-neutral-800);
+  --color-neutral-900: var(--cstu-neutral-900);
+
+  /* Radius */
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) * 1.5);
+  --radius-xl: calc(var(--radius) * 2);
+  --radius-2xl: calc(var(--radius) * 3);
+  --radius-3xl: calc(var(--radius) * 4);
+  --radius-4xl: 9999px;
+
+  /* Easing tokens */
+  --ease-out-cstu: cubic-bezier(0, 0, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-:root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  /* CSTU brand: deep academic navy */
-  --primary: oklch(0.37 0.11 258);
-  --primary-foreground: oklch(0.985 0 0);
-  /* CSTU accent: warm gold (used for highlights, not interactive hover) */
-  --brand: oklch(0.8 0.12 85);
-  --brand-foreground: oklch(0.27 0.03 80);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.5 0.1 258);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.7 0.12 256);
-  --primary-foreground: oklch(0.2 0.03 258);
-  --brand: oklch(0.8 0.12 85);
-  --brand-foreground: oklch(0.27 0.03 80);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-}
-
+/* ── BASE LAYER ──────────────────────────────────────────────────────────── */
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+    line-height: 1.6;
   }
   html {
     @apply font-sans;
+    scroll-behavior: smooth;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-heading text-ink;
+    text-wrap: balance;
+  }
+  .dark h1,
+  .dark h2,
+  .dark h3,
+  .dark h4 {
+    @apply text-cream;
+  }
+}
+
+/* ── COMPONENT UTILITIES ─────────────────────────────────────────────────── */
+@layer components {
+  /* Eyebrow — mono, uppercase, tracked label (used above headings) */
+  .eyebrow {
+    @apply font-mono text-[11px] font-medium tracking-[0.12em] text-primary uppercase;
   }
 }

@@ -130,15 +130,15 @@ async function EnrollBody({
 
   return (
     <div className="space-y-6">
-      <div className="bg-muted/40 rounded-lg border p-4">
-        <h2 className="font-semibold">{course.title}</h2>
-        <p className="text-muted-foreground mt-1 text-sm">
+      <div className="rounded-md border border-border bg-neutral-50 p-5 dark:bg-muted/40">
+        <h2 className="font-heading text-lg font-bold">{course.title}</h2>
+        <p className="mt-1 font-mono text-xs tracking-[0.03em] text-muted-foreground">
           {formatDateTime(course.startAt)} – {formatDateTime(course.endAt)}
         </p>
         {!hasBothModes(course) ? (
-          <p className="mt-2 text-xl font-semibold">
+          <p className="mt-3 font-heading text-2xl font-bold text-ink dark:text-cream">
             {formatCurrency(price)}
-            <span className="text-muted-foreground ml-2 text-sm font-normal">
+            <span className="ml-2 font-sans text-sm font-normal text-muted-foreground">
               {COURSE_MODE_LABELS[mode]}
             </span>
           </p>
@@ -147,8 +147,8 @@ async function EnrollBody({
 
       {hasBothModes(course) ? (
         <div>
-          <p className="mb-2 text-sm font-medium">Choose your format</p>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <p className="eyebrow mb-3">Choose your format</p>
+          <div className="grid gap-4 sm:grid-cols-2">
             {availableModes(course).map((m) => {
               const selected = m === mode;
               const mPrice = modePrice(course, m) ?? 0;
@@ -160,16 +160,16 @@ async function EnrollBody({
                   scroll={false}
                   aria-pressed={selected}
                   className={cn(
-                    "flex flex-col gap-1 rounded-lg border p-4 transition-colors",
+                    "flex flex-col gap-1 rounded-sm border-[1.5px] p-4 transition-colors",
                     selected
-                      ? "border-primary bg-primary/5 ring-1 ring-primary"
-                      : "hover:bg-muted/50",
+                      ? "border-primary bg-red-50 dark:bg-primary/10"
+                      : "border-border hover:border-neutral-300 hover:bg-neutral-50 dark:hover:bg-muted/50",
                   )}
                 >
-                  <span className="text-muted-foreground text-sm font-medium">
+                  <span className="font-mono text-[11px] tracking-[0.06em] text-muted-foreground uppercase">
                     {COURSE_MODE_LABELS[m]}
                   </span>
-                  <span className="text-xl font-semibold">
+                  <span className="font-heading text-xl font-bold text-ink dark:text-cream">
                     {formatCurrency(mPrice)}
                   </span>
                 </Link>

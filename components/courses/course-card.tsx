@@ -30,15 +30,15 @@ export function CourseCard({ course }: { course: PublicCourse }) {
   const showFrom = hasBothModes(course);
 
   return (
-    <Card className="flex flex-col">
+    <Card className="flex flex-col transition-all duration-200 hover:-translate-y-1 hover:shadow-md">
       <CardHeader>
         <CardTitle className="text-lg">{course.title}</CardTitle>
-        <p className="text-muted-foreground text-sm">
+        <p className="font-mono text-xs tracking-[0.03em] text-muted-foreground">
           {formatDate(course.startAt)} – {formatDate(course.endAt)}
         </p>
       </CardHeader>
       <CardContent className="flex-1">
-        <p className="text-2xl font-semibold">
+        <p className="font-heading text-2xl font-bold text-ink dark:text-cream">
           {showFrom ? (
             <span className="text-muted-foreground mr-1 text-sm font-normal">
               From
