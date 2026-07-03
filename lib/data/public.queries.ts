@@ -17,6 +17,11 @@ export function getEnabledCourseBySlug(slug: string) {
   });
 }
 
+/** An enabled course with sections — the shape passed to detail page templates. */
+export type PublicCourseDetail = NonNullable<
+  Awaited<ReturnType<typeof getEnabledCourseBySlug>>
+>;
+
 /** A single enabled course by id (used by the enroll flow). */
 export function getEnabledCourseById(id: string) {
   return prisma.course.findFirst({ where: { id, enabled: true } });

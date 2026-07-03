@@ -16,6 +16,7 @@ export type ProfileInput = z.infer<typeof ProfileSchema>;
 
 export const EnrollSchema = z.object({
   courseId: z.string().min(1),
+  mode: z.enum(["ONLINE", "OFFLINE"]),
   snapshotName: optionalText(120),
   snapshotPhone: optionalText(40),
   snapshotWechat: optionalText(80),

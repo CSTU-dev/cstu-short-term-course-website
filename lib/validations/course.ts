@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+const priceField = z
+  .number()
+  .nonnegative("Price must be zero or more")
+  .max(1_000_000)
+  .nullable();
+
 export const CourseFormSchema = z
   .object({
     title: z.string().trim().min(1, "Title is required").max(200),
@@ -14,16 +20,26 @@ export const CourseFormSchema = z
       ),
     startAt: z.coerce.date(),
     endAt: z.coerce.date(),
-    isOffline: z.boolean(),
-    priceAmount: z.coerce
-      .number()
-      .nonnegative("Price must be zero or more")
-      .max(1_000_000),
-    currency: z.string().trim().min(1).max(8).default("USD"),
+    hasOnline: z.boolean(),
+    hasOffline: z.boolean(),
+    onlinePrice: priceField,
+    offlinePrice: priceField,
   })
   .refine((d) => d.endAt > d.startAt, {
     message: "End time must be after the start time",
     path: ["endAt"],
+  })
+  .refine((d) => d.hasOnline || d.hasOffline, {
+    message: "Select at least one delivery mode (online or offline)",
+    path: ["hasOnline"],
+  })
+  .refine((d) => !d.hasOnline || d.onlinePrice !== null, {
+    message: "Enter the online price",
+    path: ["onlinePrice"],
+  })
+  .refine((d) => !d.hasOffline || d.offlinePrice !== null, {
+    message: "Enter the offline price",
+    path: ["offlinePrice"],
   });
 
 export type CourseInput = z.input<typeof CourseFormSchema>;

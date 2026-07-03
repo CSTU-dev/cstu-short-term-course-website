@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/table";
 import { canManageCourse } from "@/lib/auth/access";
 import { requireRole } from "@/lib/auth/guards";
+import { COURSE_MODE_LABELS, type CourseModeValue } from "@/lib/constants";
 import { getAdminCourseDetail } from "@/lib/data/course.queries";
 import {
   formatCurrency,
@@ -59,13 +60,20 @@ export default async function AdminCourseDetailPage({
         </CardHeader>
         <CardContent className="grid gap-3 text-sm sm:grid-cols-2">
           <Detail label="Route address" value={`/${course.slug}`} />
-          <Detail label="Format" value={course.isOffline ? "Offline" : "Online"} />
           <Detail label="Start" value={formatDateTime(course.startAt)} />
           <Detail label="End" value={formatDateTime(course.endAt)} />
-          <Detail
-            label="Price"
-            value={formatCurrency(Number(course.priceAmount), course.currency)}
-          />
+          {course.hasOnline ? (
+            <Detail
+              label="Online price"
+              value={formatCurrency(Number(course.onlinePrice ?? 0))}
+            />
+          ) : null}
+          {course.hasOffline ? (
+            <Detail
+              label="Offline price"
+              value={formatCurrency(Number(course.offlinePrice ?? 0))}
+            />
+          ) : null}
         </CardContent>
       </Card>
 
@@ -87,6 +95,7 @@ export default async function AdminCourseDetailPage({
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
+                    <TableHead>Mode</TableHead>
                     <TableHead>Payment</TableHead>
                     <TableHead className="text-right">Paid</TableHead>
                     <TableHead>Phone</TableHead>
@@ -100,6 +109,9 @@ export default async function AdminCourseDetailPage({
                     <TableRow key={e.id}>
                       <TableCell>{e.snapshotName ?? "—"}</TableCell>
                       <TableCell>{e.snapshotEmail ?? e.user.email}</TableCell>
+                      <TableCell>
+                        {COURSE_MODE_LABELS[e.mode as CourseModeValue]}
+                      </TableCell>
                       <TableCell>{formatEnrollmentStatus(e.status)}</TableCell>
                       <TableCell className="text-right">
                         {formatCurrency(Number(e.amountPaid), e.currency)}

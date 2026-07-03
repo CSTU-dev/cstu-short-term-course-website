@@ -3,8 +3,9 @@ import Link from "next/link";
 import { CourseFormDialog } from "@/components/courses/course-form-dialog";
 import { Badge } from "@/components/ui/badge";
 import { requireRole } from "@/lib/auth/guards";
+import { formatModePricing } from "@/lib/courses";
 import { listAllCourses } from "@/lib/data/course.queries";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 
 export default async function SuperAdminCoursesPage() {
   await requireRole("SUPER_ADMIN");
@@ -40,8 +41,7 @@ export default async function SuperAdminCoursesPage() {
                   </div>
                   <p className="text-muted-foreground text-sm">
                     /{course.slug} · {formatDate(course.startAt)} –{" "}
-                    {formatDate(course.endAt)} ·{" "}
-                    {formatCurrency(Number(course.priceAmount), course.currency)}
+                    {formatDate(course.endAt)} · {formatModePricing(course)}
                   </p>
                 </div>
                 <span className="text-muted-foreground hidden text-xs sm:block">

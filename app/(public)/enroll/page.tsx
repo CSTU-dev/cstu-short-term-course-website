@@ -11,22 +11,34 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { auth } from "@/lib/auth";
-import { ROLE } from "@/lib/constants";
+import { COURSE_MODE_LABELS, ROLE } from "@/lib/constants";
+import {
+  availableModes,
+  hasBothModes,
+  modeParam,
+  modePrice,
+  resolveMode,
+} from "@/lib/courses";
 import { prisma } from "@/lib/db";
 import { getEnabledCourseById } from "@/lib/data/public.queries";
 import { getMyEnrollmentForCourse } from "@/lib/data/enrollment.queries";
+import { cn } from "@/lib/utils";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 
 export default async function EnrollPage({
   searchParams,
 }: {
-  searchParams: Promise<{ courseId?: string }>;
+  searchParams: Promise<{ courseId?: string; mode?: string }>;
 }) {
-  const { courseId } = await searchParams;
+  const { courseId, mode } = await searchParams;
   const session = await auth();
 
   if (!session?.user) {
-    const callback = `/enroll${courseId ? `?courseId=${courseId}` : ""}`;
+    const query = new URLSearchParams();
+    if (courseId) query.set("courseId", courseId);
+    if (mode) query.set("mode", mode);
+    const suffix = query.toString();
+    const callback = `/enroll${suffix ? `?${suffix}` : ""}`;
     redirect(`/login?redirectTo=${encodeURIComponent(callback)}`);
   }
 
@@ -38,7 +50,11 @@ export default async function EnrollPage({
           <CardDescription>Confirm your details and enroll.</CardDescription>
         </CardHeader>
         <CardContent>
-          <EnrollBody userId={session.user.id} courseId={courseId} />
+          <EnrollBody
+            userId={session.user.id}
+            courseId={courseId}
+            requestedMode={mode}
+          />
         </CardContent>
       </Card>
     </div>
@@ -48,9 +64,11 @@ export default async function EnrollPage({
 async function EnrollBody({
   userId,
   courseId,
+  requestedMode,
 }: {
   userId: string;
   courseId?: string;
+  requestedMode?: string;
 }) {
   const session = await auth();
   if (session?.user?.role !== ROLE.USER) {
@@ -75,6 +93,16 @@ async function EnrollBody({
       </div>
     );
   }
+
+  const mode = resolveMode(course, requestedMode);
+  if (!mode) {
+    return (
+      <p className="text-muted-foreground text-sm">
+        This course has no pricing available right now.
+      </p>
+    );
+  }
+  const price = modePrice(course, mode) ?? 0;
 
   const existing = await getMyEnrollmentForCourse(course.id, userId);
   if (existing && existing.status !== "PENDING") {
@@ -107,11 +135,51 @@ async function EnrollBody({
         <p className="text-muted-foreground mt-1 text-sm">
           {formatDateTime(course.startAt)} – {formatDateTime(course.endAt)}
         </p>
-        <p className="mt-2 text-xl font-semibold">
-          {formatCurrency(Number(course.priceAmount), course.currency)}
-        </p>
+        {!hasBothModes(course) ? (
+          <p className="mt-2 text-xl font-semibold">
+            {formatCurrency(price)}
+            <span className="text-muted-foreground ml-2 text-sm font-normal">
+              {COURSE_MODE_LABELS[mode]}
+            </span>
+          </p>
+        ) : null}
       </div>
-      <EnrollForm courseId={course.id} defaults={defaults} />
+
+      {hasBothModes(course) ? (
+        <div>
+          <p className="mb-2 text-sm font-medium">Choose your format</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {availableModes(course).map((m) => {
+              const selected = m === mode;
+              const mPrice = modePrice(course, m) ?? 0;
+              return (
+                <Link
+                  replace
+                  key={m}
+                  href={`/enroll?courseId=${course.id}&mode=${modeParam(m)}`}
+                  scroll={false}
+                  aria-pressed={selected}
+                  className={cn(
+                    "flex flex-col gap-1 rounded-lg border p-4 transition-colors",
+                    selected
+                      ? "border-primary bg-primary/5 ring-1 ring-primary"
+                      : "hover:bg-muted/50",
+                  )}
+                >
+                  <span className="text-muted-foreground text-sm font-medium">
+                    {COURSE_MODE_LABELS[m]}
+                  </span>
+                  <span className="text-xl font-semibold">
+                    {formatCurrency(mPrice)}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      <EnrollForm courseId={course.id} mode={mode} defaults={defaults} />
     </div>
   );
 }

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { saveEnrollment } from "@/lib/actions/enroll.actions";
 import { completeStubPayment } from "@/lib/actions/payment.actions";
-import { REFERRAL_STORAGE_KEY } from "@/lib/constants";
+import { REFERRAL_STORAGE_KEY, type CourseModeValue } from "@/lib/constants";
 
 export type EnrollDefaults = {
   name: string;
@@ -20,9 +20,11 @@ export type EnrollDefaults = {
 
 export function EnrollForm({
   courseId,
+  mode,
   defaults,
 }: {
   courseId: string;
+  mode: CourseModeValue;
   defaults: EnrollDefaults;
 }) {
   const router = useRouter();
@@ -45,6 +47,7 @@ export function EnrollForm({
     startTransition(async () => {
       const res = await saveEnrollment({
         courseId,
+        mode,
         snapshotName: form.name,
         snapshotPhone: form.phone,
         snapshotWechat: form.wechat,

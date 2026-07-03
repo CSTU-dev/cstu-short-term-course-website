@@ -33,6 +33,12 @@ enum EnrollmentStatus {
   CANCELLED // abandoned before payment (optional)
 }
 
+/// Delivery mode of a course. A course may offer one or both, each priced separately.
+enum CourseMode {
+  ONLINE
+  OFFLINE
+}
+
 /// Third-party payment transaction (Stripe stub) direction.
 enum TransactionType {
   PAYMENT
@@ -200,9 +206,13 @@ model Course {
   slug        String   @unique // custom route address, unique
   startAt     DateTime
   endAt       DateTime
-  isOffline   Boolean  @default(false)
-  priceAmount Decimal  @db.Decimal(10, 2)
-  currency    String   @default("USD")
+
+  // Delivery modes: a course may offer online and/or offline, each priced separately (USD).
+  hasOnline    Boolean  @default(false)
+  hasOffline   Boolean  @default(false)
+  onlinePrice  Decimal? @db.Decimal(10, 2)
+  offlinePrice Decimal? @db.Decimal(10, 2)
+
   enabled     Boolean  @default(false) // new courses default off
 
   // Custom course detail page content (rich text / structured JSON placeholder)
@@ -261,6 +271,7 @@ model Enrollment {
   userId   String
   courseId String
   status   EnrollmentStatus @default(PENDING)
+  mode     CourseMode       @default(ONLINE) // delivery mode chosen at enroll time
 
   // Enrollment snapshot (this enrollment only; never written back to User profile)
   snapshotName   String?

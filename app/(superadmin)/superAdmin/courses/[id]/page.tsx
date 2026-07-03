@@ -11,8 +11,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { requireRole } from "@/lib/auth/guards";
-import { getCourseDetail } from "@/lib/data/course.queries";
 import { formatCurrency, formatDateTime, toDateTimeLocal } from "@/lib/format";
+import { getCourseDetail } from "@/lib/data/course.queries";
 
 export default async function SuperAdminCourseDetailPage({
   params,
@@ -29,9 +29,11 @@ export default async function SuperAdminCourseDetailPage({
     slug: course.slug,
     startAt: toDateTimeLocal(course.startAt),
     endAt: toDateTimeLocal(course.endAt),
-    isOffline: course.isOffline,
-    priceAmount: String(course.priceAmount),
-    currency: course.currency,
+    hasOnline: course.hasOnline,
+    hasOffline: course.hasOffline,
+    onlinePrice: course.onlinePrice != null ? String(course.onlinePrice) : "",
+    offlinePrice:
+      course.offlinePrice != null ? String(course.offlinePrice) : "",
   };
 
   const admins = course.assignments.map((a) => ({
@@ -79,11 +81,18 @@ export default async function SuperAdminCourseDetailPage({
         <CardContent className="grid gap-3 text-sm sm:grid-cols-2">
           <Detail label="Start" value={formatDateTime(course.startAt)} />
           <Detail label="End" value={formatDateTime(course.endAt)} />
-          <Detail label="Format" value={course.isOffline ? "Offline" : "Online"} />
-          <Detail
-            label="Price"
-            value={formatCurrency(Number(course.priceAmount), course.currency)}
-          />
+          {course.hasOnline ? (
+            <Detail
+              label="Online price"
+              value={formatCurrency(Number(course.onlinePrice ?? 0))}
+            />
+          ) : null}
+          {course.hasOffline ? (
+            <Detail
+              label="Offline price"
+              value={formatCurrency(Number(course.offlinePrice ?? 0))}
+            />
+          ) : null}
         </CardContent>
       </Card>
 

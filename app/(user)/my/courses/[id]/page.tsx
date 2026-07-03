@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { requireRole } from "@/lib/auth/guards";
+import { COURSE_MODE_LABELS, type CourseModeValue } from "@/lib/constants";
 import { getMyEnrollment } from "@/lib/data/enrollment.queries";
 import {
   formatCurrency,
@@ -44,15 +45,16 @@ export default async function MyCourseDetailPage({
           <Detail label="Start" value={formatDateTime(course.startAt)} />
           <Detail label="End" value={formatDateTime(course.endAt)} />
           <Detail
+            label="Format"
+            value={COURSE_MODE_LABELS[enrollment.mode as CourseModeValue]}
+          />
+          <Detail
             label="Price"
-            value={formatCurrency(Number(course.priceAmount), course.currency)}
+            value={formatCurrency(Number(enrollment.listPrice))}
           />
           <Detail
             label="Amount paid"
-            value={formatCurrency(
-              Number(enrollment.amountPaid),
-              enrollment.currency,
-            )}
+            value={formatCurrency(Number(enrollment.amountPaid))}
           />
           <Detail
             label="Status"

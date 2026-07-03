@@ -2,8 +2,9 @@ import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { requireRole } from "@/lib/auth/guards";
+import { formatModePricing } from "@/lib/courses";
 import { listCoursesForAdmin } from "@/lib/data/course.queries";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 
 export default async function AdminCoursesPage() {
   const session = await requireRole("ADMIN");
@@ -36,7 +37,7 @@ export default async function AdminCoursesPage() {
                   </div>
                   <p className="text-muted-foreground text-sm">
                     {formatDate(course.startAt)} – {formatDate(course.endAt)} ·{" "}
-                    {formatCurrency(Number(course.priceAmount), course.currency)}
+                    {formatModePricing(course)}
                   </p>
                 </div>
                 <span className="text-muted-foreground hidden text-xs sm:block">

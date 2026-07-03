@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { CourseCard, type PublicCourse } from "@/components/courses/course-card";
 import { buttonVariants } from "@/components/ui/button";
+import { hasBothModes, lowestPrice } from "@/lib/courses";
 import { getEnabledCourses } from "@/lib/data/public.queries";
 import { formatCurrency, formatDate } from "@/lib/format";
 
@@ -11,9 +12,10 @@ function toPublic(course: {
   title: string;
   startAt: Date;
   endAt: Date;
-  priceAmount: unknown;
-  currency: string;
-  isOffline: boolean;
+  hasOnline: boolean;
+  hasOffline: boolean;
+  onlinePrice: unknown;
+  offlinePrice: unknown;
 }): PublicCourse {
   return {
     id: course.id,
@@ -21,9 +23,11 @@ function toPublic(course: {
     title: course.title,
     startAt: course.startAt,
     endAt: course.endAt,
-    priceAmount: Number(course.priceAmount),
-    currency: course.currency,
-    isOffline: course.isOffline,
+    hasOnline: course.hasOnline,
+    hasOffline: course.hasOffline,
+    onlinePrice: course.onlinePrice != null ? Number(course.onlinePrice) : null,
+    offlinePrice:
+      course.offlinePrice != null ? Number(course.offlinePrice) : null,
   };
 }
 
@@ -50,7 +54,8 @@ export default async function HomePage() {
               <h2 className="mt-1 text-xl font-semibold">{featured.title}</h2>
               <p className="text-primary-foreground/80 mt-1 text-sm">
                 {formatDate(featured.startAt)} – {formatDate(featured.endAt)} ·{" "}
-                {formatCurrency(featured.priceAmount, featured.currency)}
+                {hasBothModes(featured) ? "From " : ""}
+                {formatCurrency(lowestPrice(featured) ?? 0)}
               </p>
               <div className="mt-4 flex gap-2">
                 <Link

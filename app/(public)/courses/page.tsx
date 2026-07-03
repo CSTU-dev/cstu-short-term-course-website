@@ -11,9 +11,10 @@ export default async function CoursesPage() {
     title: c.title,
     startAt: c.startAt,
     endAt: c.endAt,
-    priceAmount: Number(c.priceAmount),
-    currency: c.currency,
-    isOffline: c.isOffline,
+    hasOnline: c.hasOnline,
+    hasOffline: c.hasOffline,
+    onlinePrice: c.onlinePrice != null ? Number(c.onlinePrice) : null,
+    offlinePrice: c.offlinePrice != null ? Number(c.offlinePrice) : null,
   }));
 
   return (

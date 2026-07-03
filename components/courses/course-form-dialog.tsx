@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +15,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { createCourse, updateCourse } from "@/lib/actions/course.actions";
 
 export type CourseFormValues = {
@@ -22,9 +22,10 @@ export type CourseFormValues = {
   slug: string;
   startAt: string;
   endAt: string;
-  isOffline: boolean;
-  priceAmount: string;
-  currency: string;
+  hasOnline: boolean;
+  hasOffline: boolean;
+  onlinePrice: string;
+  offlinePrice: string;
 };
 
 const EMPTY: CourseFormValues = {
@@ -32,9 +33,10 @@ const EMPTY: CourseFormValues = {
   slug: "",
   startAt: "",
   endAt: "",
-  isOffline: false,
-  priceAmount: "",
-  currency: "USD",
+  hasOnline: true,
+  hasOffline: false,
+  onlinePrice: "",
+  offlinePrice: "",
 };
 
 export function CourseFormDialog({
@@ -66,8 +68,21 @@ export function CourseFormDialog({
   function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
+    if (!form.hasOnline && !form.hasOffline) {
+      setError("Select at least one delivery mode (online or offline).");
+      return;
+    }
     startTransition(async () => {
-      const payload = { ...form, priceAmount: Number(form.priceAmount) };
+      const payload = {
+        title: form.title,
+        slug: form.slug,
+        startAt: form.startAt,
+        endAt: form.endAt,
+        hasOnline: form.hasOnline,
+        hasOffline: form.hasOffline,
+        onlinePrice: form.hasOnline ? Number(form.onlinePrice) : null,
+        offlinePrice: form.hasOffline ? Number(form.offlinePrice) : null,
+      };
       const res =
         mode === "create"
           ? await createCourse(payload)
@@ -140,34 +155,28 @@ export function CourseFormDialog({
                 />
               </Field>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Price" htmlFor="priceAmount">
-                <Input
-                  id="priceAmount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.priceAmount}
-                  onChange={(e) => set("priceAmount", e.target.value)}
-                  required
-                />
-              </Field>
-              <Field label="Currency" htmlFor="currency">
-                <Input
-                  id="currency"
-                  value={form.currency}
-                  onChange={(e) => set("currency", e.target.value)}
-                  required
-                />
-              </Field>
-            </div>
-            <div className="flex items-center gap-3">
-              <Switch
-                id="isOffline"
-                checked={form.isOffline}
-                onCheckedChange={(value) => set("isOffline", value)}
+            <div className="space-y-3">
+              <Label>Delivery modes &amp; pricing (USD)</Label>
+              <p className="text-muted-foreground text-sm">
+                Offer this course online, offline, or both — price each mode
+                separately. Select at least one.
+              </p>
+              <ModeRow
+                id="hasOnline"
+                label="Online"
+                checked={form.hasOnline}
+                onCheckedChange={(value) => set("hasOnline", value)}
+                price={form.onlinePrice}
+                onPriceChange={(value) => set("onlinePrice", value)}
               />
-              <Label htmlFor="isOffline">Offline course</Label>
+              <ModeRow
+                id="hasOffline"
+                label="Offline"
+                checked={form.hasOffline}
+                onCheckedChange={(value) => set("hasOffline", value)}
+                price={form.offlinePrice}
+                onPriceChange={(value) => set("offlinePrice", value)}
+              />
             </div>
             {error ? <p className="text-destructive text-sm">{error}</p> : null}
             <DialogFooter>
@@ -203,6 +212,47 @@ function Field({
     <div className="space-y-2">
       <Label htmlFor={htmlFor}>{label}</Label>
       {children}
+    </div>
+  );
+}
+
+function ModeRow({
+  id,
+  label,
+  checked,
+  onCheckedChange,
+  price,
+  onPriceChange,
+}: {
+  id: string;
+  label: string;
+  checked: boolean;
+  onCheckedChange: (value: boolean) => void;
+  price: string;
+  onPriceChange: (value: string) => void;
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-md border p-3">
+      <Checkbox id={id} checked={checked} onCheckedChange={onCheckedChange} />
+      <Label htmlFor={id} className="w-20 shrink-0">
+        {label}
+      </Label>
+      <div className="relative flex-1">
+        <span className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm">
+          $
+        </span>
+        <Input
+          type="number"
+          min="0"
+          step="0.01"
+          className="pl-6"
+          placeholder="0.00"
+          value={price}
+          disabled={!checked}
+          required={checked}
+          onChange={(e) => onPriceChange(e.target.value)}
+        />
+      </div>
     </div>
   );
 }

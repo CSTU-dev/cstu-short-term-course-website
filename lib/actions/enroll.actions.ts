@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 
 import { auth } from "@/lib/auth";
 import { writeAudit } from "@/lib/audit";
-import { REFERRAL_DISCOUNT_RATE, ROLE } from "@/lib/constants";
+import {
+  DEFAULT_CURRENCY,
+  REFERRAL_DISCOUNT_RATE,
+  ROLE,
+} from "@/lib/constants";
+import { modePrice } from "@/lib/courses";
 import { prisma } from "@/lib/db";
 import { createLogger } from "@/lib/logger";
 import { resolveReferralCode } from "@/lib/referral/service";
@@ -38,6 +43,12 @@ export async function saveEnrollment(
   });
   if (!course) return { ok: false, error: "Course not available." };
 
+  // The chosen mode must be offered by the course; price snapshot comes from it.
+  const price = modePrice(course, d.mode);
+  if (price === null) {
+    return { ok: false, error: "That option isn't available for this course." };
+  }
+
   const existing = await prisma.enrollment.findUnique({
     where: { userId_courseId: { userId: session.user.id, courseId: course.id } },
   });
@@ -53,20 +64,20 @@ export async function saveEnrollment(
     if (referral && referral.userId !== session.user.id) {
       referralCodeId = referral.id;
       discountAmount =
-        Math.round(Number(course.priceAmount) * REFERRAL_DISCOUNT_RATE * 100) /
-        100;
+        Math.round(price * REFERRAL_DISCOUNT_RATE * 100) / 100;
     }
   }
 
   const snapshot = {
+    mode: d.mode,
     snapshotName: d.snapshotName || null,
     snapshotPhone: d.snapshotPhone || null,
     snapshotWechat: d.snapshotWechat || null,
     snapshotEmail: d.snapshotEmail || null,
     note: d.note || null,
-    listPrice: course.priceAmount,
+    listPrice: price,
     discountAmount,
-    currency: course.currency,
+    currency: DEFAULT_CURRENCY,
     referralCodeId,
   };
 

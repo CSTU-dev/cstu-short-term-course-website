@@ -12,6 +12,19 @@ export const ROLE = {
 
 export type RoleValue = (typeof ROLE)[keyof typeof ROLE];
 
+/** Course delivery modes, mirroring the Prisma `CourseMode` enum. */
+export const COURSE_MODE = {
+  ONLINE: "ONLINE",
+  OFFLINE: "OFFLINE",
+} as const;
+
+export type CourseModeValue = (typeof COURSE_MODE)[keyof typeof COURSE_MODE];
+
+export const COURSE_MODE_LABELS: Record<CourseModeValue, string> = {
+  ONLINE: "Online",
+  OFFLINE: "Offline",
+};
+
 /** Route prefixes that have their own auth domain / redirect rules. */
 export const ROUTE_PREFIX = {
   SUPER_ADMIN: "/superAdmin",

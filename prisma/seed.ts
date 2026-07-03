@@ -56,9 +56,9 @@ async function seedDemoCourse() {
       slug: "intro-to-ai",
       startAt: new Date("2026-09-01T09:00:00Z"),
       endAt: new Date("2026-12-15T17:00:00Z"),
-      isOffline: false,
-      priceAmount: "1200.00",
-      currency: "USD",
+      hasOnline: true,
+      hasOffline: false,
+      onlinePrice: "1200.00",
       enabled: true,
       sections: {
         create: [
@@ -78,6 +78,48 @@ async function seedDemoCourse() {
   });
 
   console.log(`✔ demo course ready: ${course.slug}`);
+
+  // Dual-mode showcase course, with a bespoke detail page (see courses/_custom).
+  const demoData = {
+    title: "Full-Stack Product Engineering",
+    startAt: new Date("2026-10-05T09:00:00Z"),
+    endAt: new Date("2027-01-20T17:00:00Z"),
+    hasOnline: true,
+    hasOffline: true,
+    onlinePrice: "1500.00",
+    offlinePrice: "1900.00",
+    enabled: true,
+  };
+  const demo = await prisma.course.upsert({
+    where: { slug: "demo" },
+    // Keep the dual-mode showcase config in sync on every seed.
+    update: demoData,
+    create: {
+      slug: "demo",
+      ...demoData,
+      sections: {
+        create: [
+          {
+            title: "Module 1 — Foundations & Tooling",
+            videoUrl: "https://example.com/video/demo-1",
+            position: 1,
+          },
+          {
+            title: "Module 2 — Building the Backend",
+            videoUrl: "https://example.com/video/demo-2",
+            position: 2,
+          },
+          {
+            title: "Module 3 — Shipping the Frontend",
+            videoUrl: "https://example.com/video/demo-3",
+            position: 3,
+          },
+        ],
+      },
+    },
+  });
+
+  console.log(`✔ dual-mode demo course ready: ${demo.slug}`);
 }
 
 async function main() {

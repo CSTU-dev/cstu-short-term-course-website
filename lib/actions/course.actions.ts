@@ -47,9 +47,10 @@ export async function createCourse(
       slug: data.slug,
       startAt: data.startAt,
       endAt: data.endAt,
-      isOffline: data.isOffline,
-      priceAmount: data.priceAmount,
-      currency: data.currency,
+      hasOnline: data.hasOnline,
+      hasOffline: data.hasOffline,
+      onlinePrice: data.hasOnline ? data.onlinePrice : null,
+      offlinePrice: data.hasOffline ? data.offlinePrice : null,
       enabled: false,
     },
   });
@@ -93,9 +94,10 @@ export async function updateCourse(
       slug: data.slug,
       startAt: data.startAt,
       endAt: data.endAt,
-      isOffline: data.isOffline,
-      priceAmount: data.priceAmount,
-      currency: data.currency,
+      hasOnline: data.hasOnline,
+      hasOffline: data.hasOffline,
+      onlinePrice: data.hasOnline ? data.onlinePrice : null,
+      offlinePrice: data.hasOffline ? data.offlinePrice : null,
     },
   });
 

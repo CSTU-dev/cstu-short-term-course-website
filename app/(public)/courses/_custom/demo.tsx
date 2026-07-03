@@ -1,0 +1,103 @@
+import { EnrollOptions } from "@/components/courses/enroll-options";
+import { Badge } from "@/components/ui/badge";
+import { COURSE_MODE_LABELS } from "@/lib/constants";
+import { availableModes } from "@/lib/courses";
+import { formatDateTime } from "@/lib/format";
+
+import type { CustomDetailProps } from "./registry";
+
+/**
+ * Bespoke detail page for the `demo` course — a template for building custom,
+ * marketing-style course pages. Lay out whatever hero / sections / copy you
+ * like, then drop in <EnrollOptions course={course} /> for the pricing +
+ * enroll entries so online/offline links stay in sync with the shared logic.
+ */
+export function DemoDetail({ course }: CustomDetailProps) {
+  return (
+    <div>
+      {/* Hero */}
+      <section className="bg-primary text-primary-foreground">
+        <div className="mx-auto max-w-4xl px-4 py-16 sm:py-20">
+          <div className="flex flex-wrap items-center gap-2">
+            {availableModes(course).map((mode) => (
+              <Badge
+                key={mode}
+                variant="secondary"
+                className="bg-white/15 text-primary-foreground"
+              >
+                {COURSE_MODE_LABELS[mode]}
+              </Badge>
+            ))}
+          </div>
+          <h1 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
+            {course.title}
+          </h1>
+          <p className="text-primary-foreground/80 mt-3 text-lg">
+            A hands-on program you can take online or in person — learn by
+            building, with guidance every step of the way.
+          </p>
+          <p className="text-primary-foreground/70 mt-2 text-sm">
+            {formatDateTime(course.startAt)} – {formatDateTime(course.endAt)}
+          </p>
+        </div>
+      </section>
+
+      <div className="mx-auto max-w-4xl space-y-12 px-4 py-12">
+        {/* Highlights */}
+        <section className="grid gap-6 sm:grid-cols-3">
+          {[
+            {
+              title: "Project-based",
+              body: "Ship real work you can show off, not just watch lectures.",
+            },
+            {
+              title: "Live + on-demand",
+              body: "Attend in person or online — every session is recorded.",
+            },
+            {
+              title: "Mentor support",
+              body: "Get feedback from instructors throughout the course.",
+            },
+          ].map((f) => (
+            <div key={f.title} className="rounded-xl border p-5">
+              <h3 className="font-semibold">{f.title}</h3>
+              <p className="text-muted-foreground mt-1 text-sm">{f.body}</p>
+            </div>
+          ))}
+        </section>
+
+        {/* Curriculum */}
+        {course.sections.length > 0 ? (
+          <section>
+            <h2 className="text-2xl font-semibold">What you&apos;ll cover</h2>
+            <ol className="mt-4 space-y-2">
+              {course.sections.map((s, i) => (
+                <li
+                  key={s.id}
+                  className="flex items-center gap-3 rounded-md border px-4 py-3"
+                >
+                  <span className="text-muted-foreground text-sm tabular-nums">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <span className="text-sm font-medium">{s.title}</span>
+                </li>
+              ))}
+            </ol>
+            <p className="text-muted-foreground mt-2 text-sm">
+              Full materials unlock after enrollment.
+            </p>
+          </section>
+        ) : null}
+
+        {/* Pricing + enroll */}
+        <section>
+          <h2 className="text-2xl font-semibold">Choose how to attend</h2>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Pick the format that works for you — you can switch before you pay.
+          </p>
+          <EnrollOptions course={course} className="mt-6" />
+        </section>
+      </div>
+    </div>
+  );
+}
