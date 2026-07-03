@@ -22,7 +22,7 @@ export async function AdminHeader() {
       <span className="absolute inset-x-0 bottom-0 h-px bg-white/20" />
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
         <div className="flex items-center gap-3">
-          <Logo href={dashboardHref} inverted />
+          <Logo href={dashboardHref} inverted showWordmark={false} />
           {authed ? (
             <span className="rounded-full bg-white/15 px-2.5 py-0.5 font-mono text-[10px] tracking-[0.08em] uppercase">
               {label}

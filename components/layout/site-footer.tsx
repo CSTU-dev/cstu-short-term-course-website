@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { CstuSeal } from "./cstu-seal";
+import { Logo } from "./logo";
 
 const courseLinks = [
   { label: "All courses", href: "/courses" },
@@ -21,7 +21,7 @@ export function SiteFooter() {
       <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-16 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-4">
           <div className="flex items-center gap-3 text-cream">
-            <CstuSeal className="size-10" />
+            <Logo showWordmark={false} />
             <span className="font-heading text-xl font-bold text-cream">CSTU</span>
           </div>
           <p className="max-w-xs text-sm leading-relaxed text-neutral-500">
