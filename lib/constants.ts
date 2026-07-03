@@ -40,3 +40,5 @@ export const REFERRAL_CODE_LENGTH = 8;
 export const DEFAULT_CURRENCY = "USD";
 /** Placeholder commission rate (10%); made configurable later. */
 export const DEFAULT_COMMISSION_RATE = 0.1;
+/** Placeholder buyer discount when a valid referral code is applied (10%). */
+export const REFERRAL_DISCOUNT_RATE = 0.1;

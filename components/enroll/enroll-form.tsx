@@ -1,13 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { saveEnrollment } from "@/lib/actions/enroll.actions";
+import { completeStubPayment } from "@/lib/actions/payment.actions";
+import { REFERRAL_STORAGE_KEY } from "@/lib/constants";
 
 export type EnrollDefaults = {
   name: string;
@@ -25,8 +27,13 @@ export function EnrollForm({
 }) {
   const router = useRouter();
   const [form, setForm] = useState({ ...defaults, note: "" });
+  const [ref, setRef] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setRef(window.localStorage.getItem(REFERRAL_STORAGE_KEY));
+  }, []);
 
   function set(key: keyof typeof form, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -43,12 +50,18 @@ export function EnrollForm({
         snapshotWechat: form.wechat,
         snapshotEmail: form.email,
         note: form.note,
+        ref: ref ?? undefined,
       });
       if (!res.ok) {
         setError(res.error);
         return;
       }
-      // Payment is stubbed until P8 — go straight to the enrolled list.
+      // Payment is stubbed: complete it immediately, then show the enrollment.
+      const pay = await completeStubPayment(res.enrollmentId);
+      if (!pay.ok) {
+        setError(pay.error);
+        return;
+      }
       router.push("/my/courses");
     });
   }
@@ -98,13 +111,17 @@ export function EnrollForm({
           rows={3}
         />
       </Field>
+      {ref ? (
+        <p className="rounded-md bg-brand/15 px-3 py-2 text-sm text-brand-foreground">
+          A referral discount will be applied at checkout.
+        </p>
+      ) : null}
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
       <Button type="submit" className="w-full" disabled={pending}>
-        {pending ? "Saving…" : "Continue to payment"}
+        {pending ? "Processing…" : "Pay now (demo)"}
       </Button>
       <p className="text-muted-foreground text-center text-xs">
-        Payment integration is coming soon. Your enrollment will be saved as
-        unpaid.
+        Payment is simulated for now — this completes the enrollment instantly.
       </p>
     </form>
   );

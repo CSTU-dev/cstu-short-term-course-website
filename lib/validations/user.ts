@@ -21,6 +21,7 @@ export const EnrollSchema = z.object({
   snapshotWechat: optionalText(80),
   snapshotEmail: optionalText(200),
   note: optionalText(2000),
+  ref: optionalText(64),
 });
 
 export type EnrollInput = z.infer<typeof EnrollSchema>;

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { SectionListEditor } from "@/components/courses/section-list-editor";
+import { RefundDialog } from "@/components/enroll/refund-dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -91,6 +92,7 @@ export default async function AdminCourseDetailPage({
                     <TableHead>Phone</TableHead>
                     <TableHead>Wechat</TableHead>
                     <TableHead>Note</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -106,6 +108,19 @@ export default async function AdminCourseDetailPage({
                       <TableCell>{e.snapshotWechat ?? "—"}</TableCell>
                       <TableCell className="max-w-[16rem] truncate">
                         {e.note ?? "—"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {Number(e.amountPaid) - Number(e.amountRefunded) > 0 ? (
+                          <RefundDialog
+                            enrollmentId={e.id}
+                            maxAmount={
+                              Number(e.amountPaid) - Number(e.amountRefunded)
+                            }
+                            currency={e.currency}
+                          />
+                        ) : (
+                          "—"
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

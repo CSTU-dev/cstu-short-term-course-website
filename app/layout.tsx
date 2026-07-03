@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { SiteFooter } from "@/components/layout/site-footer";
+import { ReferralCapture } from "@/components/referral/referral-capture";
 import { Toaster } from "@/components/ui/sonner";
 
 import "./globals.css";
@@ -38,6 +39,7 @@ export default function RootLayout({
         {children}
         <SiteFooter />
         <Toaster />
+        <ReferralCapture />
       </body>
     </html>
   );
