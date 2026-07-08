@@ -27,13 +27,13 @@ export function EnrollForm({
   defaults: EnrollDefaults;
 }) {
   const [form, setForm] = useState({ ...defaults, note: "" });
-  const [ref, setRef] = useState<string | null>(null);
+  const [ref] = useState<string | null>(() =>
+    typeof window !== "undefined"
+      ? window.localStorage.getItem(REFERRAL_STORAGE_KEY)
+      : null
+  );
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-
-  useEffect(() => {
-    setRef(window.localStorage.getItem(REFERRAL_STORAGE_KEY));
-  }, []);
 
   function set(key: keyof typeof form, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
