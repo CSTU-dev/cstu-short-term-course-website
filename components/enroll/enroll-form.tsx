@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { saveEnrollment } from "@/lib/actions/enroll.actions";
-import { completeStubPayment } from "@/lib/actions/payment.actions";
+import { createCheckoutSession } from "@/lib/actions/payment.actions";
 import { REFERRAL_STORAGE_KEY, type CourseModeValue } from "@/lib/constants";
 
 export type EnrollDefaults = {
@@ -27,15 +26,14 @@ export function EnrollForm({
   mode: CourseModeValue;
   defaults: EnrollDefaults;
 }) {
-  const router = useRouter();
   const [form, setForm] = useState({ ...defaults, note: "" });
-  const [ref, setRef] = useState<string | null>(null);
+  const [ref] = useState<string | null>(() =>
+    typeof window !== "undefined"
+      ? window.localStorage.getItem(REFERRAL_STORAGE_KEY)
+      : null
+  );
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-
-  useEffect(() => {
-    setRef(window.localStorage.getItem(REFERRAL_STORAGE_KEY));
-  }, []);
 
   function set(key: keyof typeof form, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -59,13 +57,14 @@ export function EnrollForm({
         setError(res.error);
         return;
       }
-      // Payment is stubbed: complete it immediately, then show the enrollment.
-      const pay = await completeStubPayment(res.enrollmentId);
+      // Hand off to Stripe's hosted checkout. The enrollment is marked PAID by
+      // the webhook once payment succeeds, not here.
+      const pay = await createCheckoutSession(res.enrollmentId);
       if (!pay.ok) {
         setError(pay.error);
         return;
       }
-      router.push("/my/courses");
+      window.location.href = pay.url;
     });
   }
 
@@ -121,10 +120,10 @@ export function EnrollForm({
       ) : null}
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
       <Button type="submit" className="w-full" disabled={pending}>
-        {pending ? "Processing…" : "Pay now (demo)"}
+        {pending ? "Redirecting to checkout…" : "Continue to payment"}
       </Button>
       <p className="text-muted-foreground text-center text-xs">
-        Payment is simulated for now — this completes the enrollment instantly.
+        You&apos;ll be redirected to Stripe to complete payment securely.
       </p>
     </form>
   );

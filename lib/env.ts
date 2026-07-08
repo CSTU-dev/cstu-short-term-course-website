@@ -24,6 +24,11 @@ export const env = createEnv({
     // Outbound email (admin invites) — optional in dev.
     SMTP_URL: z.string().optional(),
     EMAIL_FROM: z.string().optional(),
+    // Stripe — server-side secret key + webhook signing secret (whsec_…).
+    // The webhook secret is optional so the app still boots before `stripe
+    // listen` hands one out; the /webhook/stripe route rejects calls until set.
+    STRIPE_SECRET_KEY: z.string().min(1),
+    STRIPE_WEBHOOK_SECRET: z.string().optional(),
     LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
       .optional(),
@@ -31,6 +36,9 @@ export const env = createEnv({
   client: {
     // Base URL used to build absolute referral links / QR codes.
     NEXT_PUBLIC_BASE_URL: z.url().default("http://localhost:3000"),
+    // Stripe publishable key. Unused by the redirect-based Checkout flow, kept
+    // for a future client-side Stripe.js integration (Elements etc.).
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
   },
   runtimeEnv: {
     NODE_ENV: process.env.NODE_ENV,
@@ -43,8 +51,12 @@ export const env = createEnv({
     SUPERADMIN_PASSWORD: process.env.SUPERADMIN_PASSWORD,
     SMTP_URL: process.env.SMTP_URL,
     EMAIL_FROM: process.env.EMAIL_FROM,
+    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
     LOG_LEVEL: process.env.LOG_LEVEL,
     NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL,
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:
+      process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
   },
   emptyStringAsUndefined: true,
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
