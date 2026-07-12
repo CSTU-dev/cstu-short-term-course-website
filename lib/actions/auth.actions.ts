@@ -87,5 +87,9 @@ export async function signInWithGoogle(formData: FormData) {
 }
 
 export async function logout() {
-  await signOut({ redirectTo: "/" });
+  // Redirect straight to a real page. Going to "/" would hit app/page.tsx's
+  // redirect("/home"), and that double redirect breaks the Server Action
+  // response behind a reverse proxy (Cloud Run), throwing "An unexpected
+  // response was received from the server" on the client.
+  await signOut({ redirectTo: "/home" });
 }
