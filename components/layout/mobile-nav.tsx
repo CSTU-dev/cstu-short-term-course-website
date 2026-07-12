@@ -13,9 +13,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { logout } from "@/lib/actions/auth.actions";
+import { type NavLink } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-
-type NavLink = { label: string; href: string };
 
 export function MobileNav({
   links,
