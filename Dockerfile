@@ -9,11 +9,10 @@ ENV PATH=$PNPM_HOME:$PATH
 RUN corepack enable
 WORKDIR /app
 
-# ---- Dependencies (cached on lockfile changes) ----
+# ---- Dependencies (Docker layer-cached on lockfile changes) ----
 FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 # ---- Builder: generate Prisma client + next build ----
 FROM base AS builder
