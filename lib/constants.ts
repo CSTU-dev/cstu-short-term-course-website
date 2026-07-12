@@ -42,6 +42,15 @@ export const ROLE_HOME: Record<RoleValue, string> = {
 export const LOGIN_PATH = "/login";
 export const SIGNUP_PATH = "/signup";
 
+// —— Navigation ——
+export type NavLink = { label: string; href: string };
+
+/** Links shown in every header (public + admin). */
+export const BASE_LINKS: NavLink[] = [
+  { label: "Home", href: "/home" },
+  { label: "Courses", href: "/courses" },
+];
+
 // —— Referral / promotion ——
 export const REFERRAL_QUERY_PARAM = "ref";
 export const REFERRAL_STORAGE_KEY = "cstu_ref";

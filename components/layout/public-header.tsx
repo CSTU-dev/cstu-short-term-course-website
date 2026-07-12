@@ -3,17 +3,10 @@ import Link from "next/link";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { buttonVariants } from "@/components/ui/button";
 import { auth } from "@/lib/auth";
-import { ROLE } from "@/lib/constants";
+import { BASE_LINKS, ROLE, ROLE_HOME, type NavLink } from "@/lib/constants";
 
 import { Logo } from "./logo";
 import { MobileNav } from "./mobile-nav";
-
-type NavLink = { label: string; href: string };
-
-const BASE_LINKS: NavLink[] = [
-  { label: "Home", href: "/home" },
-  { label: "Courses", href: "/courses" },
-];
 
 const linkClass =
   "text-ink/80 hover:text-primary border-b-2 border-transparent hover:border-primary px-3 py-5 text-sm font-medium transition-colors";
@@ -37,11 +30,7 @@ export async function PublicHeader() {
     showLogout = true;
   } else {
     rightLinks = [
-      {
-        label: "Dashboard",
-        href:
-          role === ROLE.SUPER_ADMIN ? "/superAdmin/courses" : "/admin/courses",
-      },
+      { label: "Dashboard", href: role ? ROLE_HOME[role] : "/" },
     ];
     showLogout = true;
   }
