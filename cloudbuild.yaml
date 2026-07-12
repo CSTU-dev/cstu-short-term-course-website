@@ -1,0 +1,93 @@
+# Cloud Build pipeline: build image -> push to Artifact Registry -> run Prisma
+# migrations (through the Cloud SQL Auth Proxy) -> deploy to Cloud Run.
+#
+# Wired to the existing production service `cstu-short-term`
+# (domain https://short.cstu.cloud, Cloud SQL cstu-short-term-db).
+# Attach this to a Cloud Build trigger on `main`. See docs/DEPLOY_GCP.md.
+
+substitutions:
+  _REGION: us-central1
+  _REPO: cloud-run-source-deploy # reuse the existing Artifact Registry repo
+  _SERVICE: cstu-short-term # existing production Cloud Run service
+  _CLOUDSQL_INSTANCE: cstu-dev-501420:us-central1:cstu-short-term-db
+  _NEXT_PUBLIC_BASE_URL: https://short.cstu.cloud
+  _NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: "" # pk_live_… (public; unused by redirect Checkout)
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:$SHORT_SHA
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:latest
+
+# The migrate step derives its own TCP URL from the runtime DATABASE_URL secret
+# (swaps the Cloud SQL socket host for the proxy on 127.0.0.1) — no extra secret.
+availableSecrets:
+  secretManager:
+    - versionName: projects/$PROJECT_ID/secrets/DATABASE_URL/versions/latest
+      env: DATABASE_URL
+
+steps:
+  # 1) Build the container image (inlines NEXT_PUBLIC_* into the client bundle).
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:$SHORT_SHA
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:latest
+      - --build-arg
+      - NEXT_PUBLIC_BASE_URL=${_NEXT_PUBLIC_BASE_URL}
+      - --build-arg
+      - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${_NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
+      - .
+
+  # 2) Push both tags to Artifact Registry.
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - --all-tags
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}
+
+  # 3) Apply migrations. Starts the Cloud SQL Auth Proxy on 127.0.0.1:5432, then
+  #    runs `prisma migrate deploy` against a TCP URL derived from DATABASE_URL.
+  - id: migrate
+    name: node:22-alpine
+    entrypoint: sh
+    secretEnv: ["DATABASE_URL"]
+    args:
+      - -c
+      - |
+        set -e
+        apk add --no-cache wget
+        wget -qO /workspace/cloud-sql-proxy \
+          https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.15.2/cloud-sql-proxy.linux.amd64
+        chmod +x /workspace/cloud-sql-proxy
+        /workspace/cloud-sql-proxy --port 5432 "${_CLOUDSQL_INSTANCE}" &
+        sleep 5
+        # socket URL -> proxy TCP URL (handles @/ and @localhost/ forms, drops ?host=)
+        MIGRATE_URL=$$(printf '%s' "$$DATABASE_URL" \
+          | sed -E 's#(postgresql://[^@]+@)[^/]*/#\1127.0.0.1:5432/#; s#\?[^ ]*##')
+        corepack enable
+        pnpm install --frozen-lockfile
+        DATABASE_URL="$$MIGRATE_URL" pnpm prisma migrate deploy
+
+  # 4) Deploy the new image to Cloud Run, wiring secrets + the Cloud SQL socket.
+  - id: deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:$SHORT_SHA
+      - --region=${_REGION}
+      - --platform=managed
+      - --port=8080
+      - --add-cloudsql-instances=${_CLOUDSQL_INSTANCE}
+      - --allow-unauthenticated
+      - --set-env-vars=NODE_ENV=production,AUTH_URL=${_NEXT_PUBLIC_BASE_URL},NEXT_PUBLIC_BASE_URL=${_NEXT_PUBLIC_BASE_URL}
+      - --set-secrets=DATABASE_URL=DATABASE_URL:latest,AUTH_SECRET=AUTH_SECRET:latest,STRIPE_SECRET_KEY=STRIPE_SECRET_KEY:latest,STRIPE_WEBHOOK_SECRET=STRIPE_WEBHOOK_SECRET:latest,SUPERADMIN_EMAIL=SUPERADMIN_EMAIL:latest,SUPERADMIN_PASSWORD=SUPERADMIN_PASSWORD:latest
