@@ -1,6 +1,7 @@
 "use server";
 
 import { AuthError } from "next-auth";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { signIn, signOut } from "@/lib/auth";
@@ -64,21 +65,37 @@ export async function loginWithCredentials(
 ): Promise<AuthFormState> {
   const email = formData.get("email") as string | null;
   const password = formData.get("password") as string | null;
-  const redirectTo = (formData.get("redirectTo") as string) || ROLE_HOME.USER;
+  const explicitRedirect = (formData.get("redirectTo") as string) || null;
 
   if (!email || !password) {
     return { error: "Email and password are required." };
   }
 
   try {
-    await signIn("credentials", { email, password, redirectTo });
+    // Don't let signIn redirect: we resolve the destination ourselves below so
+    // an admin/superAdmin signing in via /login lands on their dashboard
+    // instead of the generic user home.
+    await signIn("credentials", { email, password, redirect: false });
   } catch (error) {
     if (error instanceof AuthError) {
       return { error: "Invalid email or password." };
     }
-    throw error; // redirect signal
+    throw error;
   }
-  return {};
+
+  // Credentials verified — resolve the landing page. An explicit deep link
+  // (enroll/invite flows) wins; otherwise send the user to their role's home.
+  // We read the role from the DB because the session cookie signIn just set
+  // isn't yet readable via auth() within this same request.
+  let redirectTo = explicitRedirect;
+  if (!redirectTo) {
+    const account = await prisma.user.findUnique({
+      where: { email },
+      select: { role: true },
+    });
+    redirectTo = ROLE_HOME[account?.role ?? "USER"];
+  }
+  redirect(redirectTo);
 }
 
 export async function signInWithGoogle(formData: FormData) {
