@@ -1,0 +1,33 @@
+# Fix area: Dependencies & supply chain
+
+**Status:** RISK / GAP  
+**Severity:** MEDIUM  
+**Related checklist IDs:** Dep1–Dep3  
+**Key files:** `package.json`, `pnpm-lock.yaml`
+
+---
+
+## Problems
+
+1. **`next-auth@5.0.0-beta.31`** — authentication is on a beta line. Track GitHub advisories and upgrade promptly when stable releases / patches land.
+2. **No evidence of CI dependency audit** in-repo for this audit pass — run `pnpm audit` regularly and/or enable Dependabot / Renovate.
+3. **`shadcn` as a runtime dependency** is unusual (CLI is typically dev-only) — review whether it must ship in production `dependencies` (smaller prod surface is better).
+
+Lockfile is present (good). Prefer `pnpm install --frozen-lockfile` in CI.
+
+---
+
+## Recommended fixes
+
+- Add CI job: `pnpm audit --prod` (or org policy equivalent); fail on high/critical.
+- Enable Dependabot/Renovate for npm.
+- Pin and review Auth.js upgrades; read changelogs before bumping.
+- Remove unused runtime deps if confirmed unnecessary.
+
+---
+
+## Acceptance criteria
+
+- [ ] Automated vulnerability scanning in CI
+- [ ] Process to patch Auth.js / Next / Stripe SDKs within a defined SLA
+- [ ] Production dependency set reviewed for unnecessary packages
