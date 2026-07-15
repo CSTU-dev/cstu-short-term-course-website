@@ -18,3 +18,10 @@ Run on localhost:3000
 ```bash
 npm run dev
 ```
+
+## Security
+
+Read-only security audit checklist and fix notes (no secrets in source — use `.env` only):
+
+- [docs/security/CHECKLIST.md](./docs/security/CHECKLIST.md) — full cybersecurity checklist
+- [docs/security/fixes/](./docs/security/fixes/) — areas that need remediation before public production
