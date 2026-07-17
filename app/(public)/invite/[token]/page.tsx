@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { auth } from "@/lib/auth";
+import { isEmailVerified } from "@/lib/auth/access";
 import { prisma } from "@/lib/db";
 import { hashToken } from "@/lib/tokens";
 
@@ -60,6 +61,13 @@ export default async function InvitePage({
       <p className="text-destructive text-sm">
         This invitation was sent to {invite.email}, but you&apos;re signed in as{" "}
         {session.user.email}. Please sign in with the invited email.
+      </p>
+    );
+  } else if (!(await isEmailVerified(session.user.id))) {
+    body = (
+      <p className="text-muted-foreground text-sm">
+        Please verify your email first — check your inbox for the verification
+        link we sent. Once verified, reload this page to accept the invitation.
       </p>
     );
   } else {

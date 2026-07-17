@@ -22,10 +22,14 @@ const log = createLogger("admin-action");
 const INVITE_TTL_DAYS = 7;
 
 /**
- * Assign an admin to a course by email. If the user exists they're promoted to
- * ADMIN (if needed) and linked to the course. If not, an AdminInvite is created
- * and the invite link is emailed to the address (logged in dev when SMTP is
- * unset).
+ * Assign an admin to a course by email.
+ *
+ * Promotion requires proof the target controls the email (N1). A direct promote
+ * + assignment happens ONLY for an existing account whose email is already
+ * verified. In every other case — no account yet, or an account whose email is
+ * unverified — an email-bound AdminInvite is created and emailed; acceptance
+ * (`acceptAdminInvite`) additionally requires a verified email, so an unverified
+ * account still can't gain ADMIN without proving control first.
  */
 export async function assignAdmin(
   courseId: string,
@@ -44,7 +48,8 @@ export async function assignAdmin(
 
   const user = await prisma.user.findUnique({ where: { email } });
 
-  if (user) {
+  // Existing, email-verified account: control is proven, so assign directly.
+  if (user?.emailVerified) {
     const existing = await prisma.courseAssignment.findUnique({
       where: { courseId_adminId: { courseId, adminId: user.id } },
     });
@@ -81,8 +86,8 @@ export async function assignAdmin(
     return { ok: true, message: `${email} is now an admin for this course.` };
   }
 
-  // No account yet — create an invite. Throttle per target email so a repeated
-  // submit can't flood one inbox with invitation emails.
+  // No account, or an unverified account → invite flow. Throttle per target
+  // email so a repeated submit can't flood one inbox with invitation emails.
   const limit = await rateLimit(`admin-invite:email:${email}`, RATE_LIMITS.adminInvite);
   if (!limit.ok) {
     return {
@@ -91,6 +96,7 @@ export async function assignAdmin(
     };
   }
 
+  const hasUnverifiedAccount = Boolean(user);
   const token = nanoid(32);
   const expiresAt = new Date(Date.now() + INVITE_TTL_DAYS * 24 * 60 * 60 * 1000);
   await prisma.adminInvite.create({
@@ -106,7 +112,7 @@ export async function assignAdmin(
   await writeAudit({
     action: "ADMIN_INVITE_SENT",
     entityType: "AdminInvite",
-    after: { email, courseId },
+    after: { email, courseId, existingAccount: hasUnverifiedAccount },
     actorId: session!.user.id,
   });
 
@@ -115,13 +121,22 @@ export async function assignAdmin(
     to: email,
     ...adminInviteEmail(course.title, inviteUrl, INVITE_TTL_DAYS),
   });
-  log.info({ courseId, email, sent }, "admin invite created");
+  log.info(
+    { courseId, email, sent, existingAccount: hasUnverifiedAccount },
+    "admin invite created",
+  );
   revalidatePath(`/superAdmin/courses/${courseId}`);
+  if (!sent) {
+    return {
+      ok: true,
+      message: `Invite created for ${email}, but the email could not be sent — check SMTP settings.`,
+    };
+  }
   return {
     ok: true,
-    message: sent
-      ? `No account found for ${email}. An invitation has been emailed to them.`
-      : `Invite created for ${email}, but the email could not be sent — check SMTP settings.`,
+    message: hasUnverifiedAccount
+      ? `${email} has an unverified account. An invitation was emailed; they must verify their email, then accept it.`
+      : `No account found for ${email}. An invitation has been emailed to them.`,
   };
 }
 
@@ -170,6 +185,20 @@ export async function acceptAdminInvite(
     return {
       ok: false,
       error: "This invitation was sent to a different email address.",
+    };
+  }
+
+  // N1: an invite may only elevate an account that has proven it controls the
+  // email. Google accounts are verified on sign-in; credential users must click
+  // their verification link first.
+  const acceptingUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { emailVerified: true },
+  });
+  if (!acceptingUser?.emailVerified) {
+    return {
+      ok: false,
+      error: "Please verify your email before accepting this invitation.",
     };
   }
 
