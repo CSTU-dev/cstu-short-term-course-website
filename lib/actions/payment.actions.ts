@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { auth } from "@/lib/auth";
-import { canManageCourse } from "@/lib/auth/access";
+import { canManageCourse, isEmailVerified } from "@/lib/auth/access";
 import { COURSE_MODE_LABELS, type CourseModeValue } from "@/lib/constants";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
@@ -27,6 +27,9 @@ export async function createCheckoutSession(
 ): Promise<ActionResult<{ url: string }>> {
   const session = await auth();
   if (!session?.user) return { ok: false, error: "Not signed in" };
+  if (!(await isEmailVerified(session.user.id))) {
+    return { ok: false, error: "Please verify your email before paying." };
+  }
 
   const enrollment = await prisma.enrollment.findFirst({
     where: { id: enrollmentId, userId: session.user.id },

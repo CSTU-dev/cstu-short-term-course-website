@@ -3,7 +3,15 @@
 **Scope:** Re-audit of the full repo against the 2026-07-10 checklist, focused on
 (1) secret strings, (2) common web security issues (authorization in particular),
 (3) superAdmin / database access, (4) Google (Cloud) access.
-**Mode:** Read-only — this doc proposes fixes only; no code was changed.
+**Mode:** Read-only audit as of 2026-07-11 — the *findings* below were proposals
+at that date; no code had been changed then.
+
+> **Update log — 2026-07-16:** an email + auth-hardening pass landed. Several
+> TODO items are now implemented; checkboxes below are updated with `— DONE`
+> / `— PARTIAL` annotations. New residuals are cross-linked to their owning fix
+> docs ([01](./01-auth-jwt-role.md), [02](./02-rate-limiting.md)) rather than
+> duplicated here. The N1/N2/N-detail *narrative* sections further down are left
+> as the original audit record.
 
 ---
 
@@ -25,15 +33,15 @@ carry over from the 2026-07-10 checklist and link to their fix notes.
 
 ### P0 — before any real users / real money
 
-- [ ] **[new] N1 — Stop promoting unverified accounts to ADMIN.** In `lib/actions/admin.actions.ts#assignAdmin`, when the target email already has an account, do **not** promote it directly. Route existing users through the same invite-token acceptance flow as new users, and require the account's email to be verified (`emailVerified` set) before `acceptAdminInvite` grants the role. Send the invite to the email address itself (SMTP) rather than returning the link for out-of-band sharing.
-- [ ] **Refresh role from DB / force re-login on role change** (stale JWT role) → [01-auth-jwt-role.md](./01-auth-jwt-role.md)
-- [ ] **Rate-limit login, signup, and the credentials `authorize` path** → [02-rate-limiting.md](./02-rate-limiting.md)
+- [x] **[new] N1 — Stop promoting unverified accounts to ADMIN.** — **DONE 2026-07-16.** `assignAdmin` now direct-promotes only an existing account whose email is already verified (control proven by #1); every other case (no account / unverified) goes through the email-bound invite, and `acceptAdminInvite` additionally requires `emailVerified`. Invite is emailed via SMTP (link no longer returned). Audit gains an `existingAccount` flag.
+- [ ] **Refresh role from DB / force re-login on role change** (stale JWT role) → [01-auth-jwt-role.md](./01-auth-jwt-role.md) — still open; password reset/change now also depend on this (session invalidation, see 01 Problem 5).
+- [ ] **Rate-limit login, signup, and the credentials `authorize` path** → [02-rate-limiting.md](./02-rate-limiting.md) — **PARTIAL 2026-07-16.** Action-level limits done (login 10/min, signup 5/min, per IP; Postgres-backed). **Residual:** the native `/api/auth/callback/credentials` path still bypasses it — move the limit into `authorize`. See 02.
 - [ ] **Wire manual refunds to real Stripe Refunds** (or clearly label the ledger-only behavior) → [03-payments-stripe.md](./03-payments-stripe.md)
 - [ ] **Production DB: strong unique credentials + never bind 5432 publicly** → [05-database-docker.md](./05-database-docker.md)
 
 ### P1 — hardening before public launch
 
-- [ ] **Email verification for credentials signup** (also the prerequisite for N1) → [07-email-verification.md](./07-email-verification.md)
+- [x] **Email verification for credentials signup** (also the prerequisite for N1) → [07-email-verification.md](./07-email-verification.md) — **DONE 2026-07-16.** Unverified users can sign in but can't enroll/pay/manage referrals; hashed single-use 24h token; resend banner on `/my`; Google SSO auto-verified.
 - [ ] **[new] N2 — Keep Google access developer-only for now (ops):**
   - Keep the GCP OAuth consent screen in **Testing** mode with only the developers listed as test users; do not click "Publish app" until launch.
   - Keep `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` **unset** in any non-dev deployment until launch — the code already hides the Google button when they are absent, so this is pure configuration.
@@ -43,13 +51,14 @@ carry over from the 2026-07-10 checklist and link to their fix notes.
 - [ ] **Webhook amount reconciliation + double-payment guard** → [03-payments-stripe.md](./03-payments-stripe.md)
   - [ ] **[new] N8 (extends P6):** make the `amount_total / 100` conversion currency-aware (zero-decimal currencies) and reject/flag events whose `currency` doesn't match the enrollment's `currency`.
 - [ ] **Restrict `videoUrl` to `https:` URLs** in `SectionFormSchema` → [06-input-validation-xss.md](./06-input-validation-xss.md)
-- [ ] **[new] N3 — Add a password change + reset flow.** There is currently no way for a user (or the superAdmin, short of re-seeding) to rotate a password. Reuse the existing token pattern (`lib/tokens.ts`: high-entropy nanoid, SHA-256 at rest, short TTL, single-use), rate-limit requests, and respond identically whether or not the email exists.
+- [x] **[new] N3 — Add a password change + reset flow.** — **DONE 2026-07-16** (except session revocation). `requestPasswordReset` (uniform response, rate-limited by IP + email, credential accounts only) → `/reset/[token]` → `resetPassword`; `changePassword` (requires current password) on `/my/info`. Uses the `PASSWORD_RESET` `UserToken` (SHA-256, 1h TTL, single-use). **Residual:** does not yet revoke other active sessions — depends on session versioning → [01-auth-jwt-role.md](./01-auth-jwt-role.md) Problem 5.
 - [ ] **Referral click endpoint: IP+code rate limit, Zod body validation, generic responses** → [08-referral-api.md](./08-referral-api.md)
 - [ ] **CI: `pnpm audit` + Dependabot/Renovate; track `next-auth` beta advisories** → [09-dependencies.md](./09-dependencies.md)
 
 ### P2 — defense-in-depth / hygiene
 
 - [ ] **[new] N4 — Uniform-time credentials login.** In `lib/auth/index.ts#authorize`, run a bcrypt compare against a static dummy hash when the user is not found or has no `passwordHash`, so both branches cost the same (complements R4 in [02-rate-limiting.md](./02-rate-limiting.md)).
+- [ ] **[new 2026-07-16] N11 — `RateLimit` stale-row cleanup.** The rate limiter (`lib/rate-limit.ts`, `RateLimit` table) never deletes rows for keys that stop recurring → unbounded growth. Add a periodic `DELETE ... WHERE "windowEnd" < now()` (Cloud Scheduler → protected route, or `pg_cron`). → [02-rate-limiting.md](./02-rate-limiting.md) residual #2.
 - [ ] **[new] N5 — Zod-validate the login / Google sign-in form data.** `loginWithCredentials` and `signInWithGoogle` read `FormData` with raw casts; validate email format, password max length (≤ 72 bytes for bcrypt), and `redirectTo` shape the same way `registerUser` does.
 - [ ] **`redirectTo` allowlist** (accept only same-site paths starting with a single `/`) applied in one shared helper used by login, signup, and invite pages → [01-auth-jwt-role.md](./01-auth-jwt-role.md)
 - [ ] **[new] N6 — Referral code hygiene.** In `lib/referral/*`: enforce case-insensitive uniqueness (store a normalized column or lowercase on write/lookup), add a reserved-word blocklist (`admin`, `cstu`, `official`, staff names, …) for user-chosen codes, and decide a retention policy for old codes — they currently stay valid forever and accumulate without bound (3 new codes/day/user).
@@ -57,7 +66,7 @@ carry over from the 2026-07-10 checklist and link to their fix notes.
 - [ ] **[new] N9 — Align `EnrollSchema.snapshotEmail` with `ProfileSchema.preferredEmail`** (email-format refine); today any ≤200-char string is accepted.
 - [ ] **[new] N10 — Seed-script guardrails (ops).** `prisma/seed.ts` upserts by `SUPERADMIN_EMAIL` and force-sets `role: SUPER_ADMIN` on every run — document that pointing this env var at an existing user's email promotes that account, and remove/rotate `SUPERADMIN_PASSWORD` from the environment after the initial seed.
 - [ ] **Admin demotion / session-revocation path** (pairs with the stale-JWT fix) → [01-auth-jwt-role.md](./01-auth-jwt-role.md)
-- [ ] **Redact email PII from info-level logs** (`registerUser` logs raw email) → [00-secrets-and-env.md](./00-secrets-and-env.md)
+- [ ] **Redact email PII from info-level logs** → [00-secrets-and-env.md](./00-secrets-and-env.md) — `registerUser` was switched to log `userId` (2026-07-16), but the new auth/email code adds fresh raw-email logs (`requestPasswordReset` OAuth/unknown branch, `assignAdmin`). Address as a group: log user ids or hashed emails.
 - [ ] **Deploy checklist: `SKIP_ENV_VALIDATION` unset in production; secrets from a secret store** → [00-secrets-and-env.md](./00-secrets-and-env.md)
 - [ ] **Production runs behind a trusted reverse proxy** (required by `trustHost: true`) with HTTPS enforced → [01-auth-jwt-role.md](./01-auth-jwt-role.md), [04-security-headers.md](./04-security-headers.md)
 

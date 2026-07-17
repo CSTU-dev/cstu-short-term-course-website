@@ -55,11 +55,24 @@ Register requires min 8 characters; no max length / complexity. bcrypt truncates
 
 ---
 
-## Problem 5 — No in-app admin demotion (LOW)
+## Problem 5 — No in-app admin demotion + no session invalidation (LOW→MEDIUM)
 
 `assignAdmin` can promote `USER` → `ADMIN`; no demotion path. Combined with stale JWT, revocation is weak.
 
-**Fix:** Add demote/revoke action + force session refresh; optionally invalidate sessions by rotating a `sessionVersion` claim stored on the user row.
+**New dependents (2026-07-16):** the password **reset** and **change** flows
+(`resetPassword` / `changePassword` in `lib/actions/auth.actions.ts`) now update
+`passwordHash` but **cannot revoke other active sessions** — under the JWT
+strategy a stolen/old token stays valid until expiry (default 30 days). Both
+actions carry a `TODO` pointing here. This weakens the primary purpose of
+"change password to lock out an intruder." Same mechanism is needed for admin
+demotion. Raising this from LOW toward MEDIUM now that self-service password
+change exists.
+
+**Fix:** Add demote/revoke action + force session refresh; invalidate sessions
+by rotating a `sessionVersion` (or `tokenValidAfter`) claim on the user row,
+compared per request in the `jwt`/`session` callback. Bump it on password
+reset, password change, and demotion. (Alternative: switch to database sessions,
+where revocation is a row delete.)
 
 ---
 
@@ -67,5 +80,11 @@ Register requires min 8 characters; no max length / complexity. bcrypt truncates
 
 - [ ] Role changes in DB are reflected in authz within one request or forced re-login
 - [ ] Demotion / invite accept both covered by tests
+- [ ] **Password reset/change and demotion revoke other active sessions** (sessionVersion) — new dependent, see Problem 5
 - [ ] Production proxy + `trustHost` documented
 - [ ] Optional: `redirectTo` allowlist + password max length
+
+> Note (2026-07-16): `acceptAdminInvite` now additionally requires
+> `emailVerified` (see [10-followup N1](./10-followup-todo-2026-07-11.md) and
+> [07-email-verification.md](./07-email-verification.md)); the stale-role gap in
+> Problem 1 is unchanged.

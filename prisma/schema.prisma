@@ -68,6 +68,11 @@ enum ReferralEventType {
 }
 
 /// Audit log action types.
+enum TokenPurpose {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
 enum AuditAction {
   COURSE_CREATE
   COURSE_UPDATE
@@ -125,6 +130,7 @@ model User {
   refundsHandled    Refund[]           @relation("RefundOperator")
   auditLogs         AuditLog[]         @relation("AuditActor")
   invitesSent       AdminInvite[]      @relation("InviteCreatedBy")
+  tokens            UserToken[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -194,6 +200,37 @@ model AdminInvite {
 
   @@index([email])
   @@index([expiresAt])
+}
+
+/// Single-use, hashed tokens tied to a user: email verification and password
+/// reset. Mirrors the AdminInvite pattern (SHA-256 at rest, TTL, single-use via
+/// `usedAt`). One generic table serves both purposes via `purpose`.
+model UserToken {
+  id        String       @id @default(cuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose   TokenPurpose
+  tokenHash String       @unique // hash of the one-time, URL-safe token
+  expiresAt DateTime
+  usedAt    DateTime? // set when consumed; null = still valid
+  createdAt DateTime     @default(now())
+
+  @@index([userId, purpose])
+  @@index([expiresAt])
+}
+
+/// Fixed-window rate-limit counters, keyed by action + identifier (e.g.
+/// "login:ip:1.2.3.4"). Shared across Cloud Run instances via the DB. Counting
+/// is approximate (Read Committed) — minor overshoot under concurrency is fine
+/// for throttling. Active keys reset their window on the next hit after expiry;
+/// fully-idle keys linger until a periodic cleanup removes them (see #02).
+model RateLimit {
+  key       String   @id
+  count     Int      @default(0)
+  windowEnd DateTime
+  createdAt DateTime @default(now())
+
+  @@index([windowEnd])
 }
 
 // ------------------------------------------------------------

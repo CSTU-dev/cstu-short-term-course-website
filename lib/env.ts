@@ -24,6 +24,11 @@ export const env = createEnv({
     // Outbound email (admin invites) — optional in dev.
     SMTP_URL: z.string().optional(),
     EMAIL_FROM: z.string().optional(),
+    // Staging safety net: comma-separated allowlist of recipients that may
+    // receive real mail. Entries are either a full address (alice@x.com) or a
+    // domain (@cstu.edu). When set, all other recipients are dropped (logged,
+    // not sent). Leave UNSET in production so real users get their mail.
+    EMAIL_ALLOWLIST: z.string().optional(),
     // Stripe — server-side secret key + webhook signing secret (whsec_…).
     // The webhook secret is optional so the app still boots before `stripe
     // listen` hands one out; the /webhook/stripe route rejects calls until set.
@@ -51,6 +56,7 @@ export const env = createEnv({
     SUPERADMIN_PASSWORD: process.env.SUPERADMIN_PASSWORD,
     SMTP_URL: process.env.SMTP_URL,
     EMAIL_FROM: process.env.EMAIL_FROM,
+    EMAIL_ALLOWLIST: process.env.EMAIL_ALLOWLIST,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
     LOG_LEVEL: process.env.LOG_LEVEL,

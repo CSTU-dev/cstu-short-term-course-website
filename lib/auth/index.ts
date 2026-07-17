@@ -18,6 +18,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   // The adapter is typed against @prisma/client; our generated client is
   // structurally compatible.
   adapter: PrismaAdapter(prisma) as Adapter,
+  callbacks: {
+    ...authConfig.callbacks,
+    async signIn({ user, account }) {
+      // Google asserts email ownership, so a Google login counts as verified.
+      // updateMany (not update) is a no-op when already verified or id absent.
+      if (account?.provider === "google" && user?.id) {
+        await prisma.user.updateMany({
+          where: { id: user.id, emailVerified: null },
+          data: { emailVerified: new Date() },
+        });
+      }
+      return true;
+    },
+  },
   providers: [
     ...authConfig.providers,
     Credentials({
