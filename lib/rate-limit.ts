@@ -22,6 +22,8 @@ export const RATE_LIMITS = {
   signup: { limit: 5, windowMs: 60_000 }, // 5 / min per IP
   resendVerification: { limit: 3, windowMs: 10 * 60_000 }, // 3 / 10 min per user
   adminInvite: { limit: 5, windowMs: 60 * 60_000 }, // 5 / h per target email
+  passwordResetIp: { limit: 5, windowMs: 15 * 60_000 }, // 5 / 15 min per IP
+  passwordResetEmail: { limit: 3, windowMs: 60 * 60_000 }, // 3 / h per email
 } as const satisfies Record<string, RateLimitRule>;
 
 /**

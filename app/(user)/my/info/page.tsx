@@ -1,3 +1,4 @@
+import { ChangePasswordForm } from "@/components/auth/change-password-form";
 import { ProfileForm } from "@/components/user/profile-form";
 import {
   Card,
@@ -23,7 +24,7 @@ export default async function MyInfoPage() {
   };
 
   return (
-    <div className="mx-auto max-w-xl px-4 py-10">
+    <div className="mx-auto max-w-xl space-y-6 px-4 py-10">
       <Card>
         <CardHeader>
           <CardTitle>My info</CardTitle>
@@ -35,6 +36,18 @@ export default async function MyInfoPage() {
           <ProfileForm defaults={defaults} />
         </CardContent>
       </Card>
+
+      {user?.passwordHash ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Password</CardTitle>
+            <CardDescription>Change your account password.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChangePasswordForm />
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }

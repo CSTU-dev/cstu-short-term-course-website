@@ -5,9 +5,12 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { auth, signIn, signOut } from "@/lib/auth";
-import { hashPassword } from "@/lib/auth/password";
+import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { ROLE_HOME } from "@/lib/constants";
 import { prisma } from "@/lib/db";
+import { sendEmail } from "@/lib/email";
+import { passwordResetEmail } from "@/lib/email-templates";
+import { env } from "@/lib/env";
 import { createLogger } from "@/lib/logger";
 import {
   clientIp,
@@ -15,12 +18,16 @@ import {
   RATE_LIMITS,
   retryAfterMessage,
 } from "@/lib/rate-limit";
-import { consumeUserToken } from "@/lib/tokens";
+import { consumeUserToken, createUserToken } from "@/lib/tokens";
 import { sendVerificationEmail } from "@/lib/verification";
 
 const log = createLogger("auth-action");
 
 export type AuthFormState = { error?: string } | undefined;
+/** Form state for flows that show a neutral success message (e.g. reset). */
+export type MessageFormState =
+  | { error?: string; done?: boolean }
+  | undefined;
 
 const RegisterSchema = z.object({
   name: z.string().trim().max(120).optional(),
@@ -181,6 +188,110 @@ export async function resendVerification(): Promise<{
 
   await sendVerificationEmail(session.user.id, session.user.email);
   return { ok: true };
+}
+
+const EmailSchema = z.email();
+const NewPasswordSchema = z.string().min(8, "Password must be at least 8 characters");
+
+/**
+ * Start a password reset: email a single-use, hashed, 1h token to the address
+ * IF it belongs to a credential account. Responds identically whether or not
+ * the account exists (anti-enumeration) and is rate-limited by IP and email.
+ */
+export async function requestPasswordReset(
+  _prev: MessageFormState,
+  formData: FormData,
+): Promise<MessageFormState> {
+  const parsedEmail = EmailSchema.safeParse(formData.get("email"));
+  if (!parsedEmail.success) {
+    return { error: "Enter a valid email address." };
+  }
+  const email = parsedEmail.data.trim().toLowerCase();
+
+  const ip = await clientIp();
+  const ipLimit = await rateLimit(`pwreset:ip:${ip}`, RATE_LIMITS.passwordResetIp);
+  const emailLimit = await rateLimit(
+    `pwreset:email:${email}`,
+    RATE_LIMITS.passwordResetEmail,
+  );
+  if (!ipLimit.ok || !emailLimit.ok) {
+    const sec = !ipLimit.ok ? ipLimit.retryAfterSec : (emailLimit as { retryAfterSec: number }).retryAfterSec;
+    return { error: `Too many requests. Try again in ${retryAfterMessage(sec)}.` };
+  }
+
+  const user = await prisma.user.findUnique({ where: { email } });
+  // Only credential accounts can reset; Google-only users have no password.
+  if (user?.passwordHash) {
+    const token = await createUserToken(user.id, "PASSWORD_RESET");
+    const resetUrl = `${env.NEXT_PUBLIC_BASE_URL}/reset/${token}`;
+    await sendEmail({ to: email, ...passwordResetEmail(resetUrl) });
+    log.info({ userId: user.id }, "password reset requested");
+  } else {
+    log.info({ email }, "password reset requested for unknown/OAuth account");
+  }
+
+  // Uniform response regardless of whether an email was actually sent.
+  return { done: true };
+}
+
+/**
+ * Complete a password reset with a valid token. Consumes the token (single-use)
+ * and sets the new password hash. Redirects to login on success.
+ */
+export async function resetPassword(
+  _prev: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const token = (formData.get("token") as string) || "";
+  const parsed = NewPasswordSchema.safeParse(formData.get("password"));
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid password" };
+  }
+
+  const userId = await consumeUserToken(token, "PASSWORD_RESET");
+  if (!userId) {
+    return { error: "This reset link is invalid or has expired." };
+  }
+  await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash: await hashPassword(parsed.data) },
+  });
+  log.info({ userId }, "password reset completed");
+  // TODO: invalidate other active sessions once session versioning lands (#01).
+  redirect("/login?reset=1");
+}
+
+/**
+ * Change the signed-in user's password. Requires the current password. Rejects
+ * accounts with no password (Google-only sign-in).
+ */
+export async function changePassword(
+  _prev: MessageFormState,
+  formData: FormData,
+): Promise<MessageFormState> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Please sign in first." };
+
+  const current = (formData.get("currentPassword") as string) || "";
+  const parsed = NewPasswordSchema.safeParse(formData.get("newPassword"));
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid password" };
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+  if (!user?.passwordHash) {
+    return { error: "Your account signs in with Google and has no password." };
+  }
+  if (!(await verifyPassword(current, user.passwordHash))) {
+    return { error: "Your current password is incorrect." };
+  }
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { passwordHash: await hashPassword(parsed.data) },
+  });
+  log.info({ userId: user.id }, "password changed");
+  // TODO: invalidate other active sessions once session versioning lands (#01).
+  return { done: true };
 }
 
 export async function logout() {
