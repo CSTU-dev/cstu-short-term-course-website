@@ -20,12 +20,10 @@ export function AdminAssignment({
 }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
-  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   function add(event: React.FormEvent) {
     event.preventDefault();
-    setInviteUrl(null);
     startTransition(async () => {
       const res = await assignAdmin(courseId, email);
       if (!res.ok) {
@@ -33,7 +31,6 @@ export function AdminAssignment({
         return;
       }
       toast.success(res.message);
-      setInviteUrl(res.inviteUrl ?? null);
       setEmail("");
       router.refresh();
     });
@@ -94,12 +91,6 @@ export function AdminAssignment({
           {pending ? "Adding…" : "Add admin"}
         </Button>
       </form>
-
-      {inviteUrl ? (
-        <div className="bg-muted text-muted-foreground rounded-md p-3 text-xs break-all">
-          Invite link (no email configured): {inviteUrl}
-        </div>
-      ) : null}
     </div>
   );
 }
