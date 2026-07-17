@@ -68,6 +68,11 @@ enum ReferralEventType {
 }
 
 /// Audit log action types.
+enum TokenPurpose {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
 enum AuditAction {
   COURSE_CREATE
   COURSE_UPDATE
@@ -125,6 +130,7 @@ model User {
   refundsHandled    Refund[]           @relation("RefundOperator")
   auditLogs         AuditLog[]         @relation("AuditActor")
   invitesSent       AdminInvite[]      @relation("InviteCreatedBy")
+  tokens            UserToken[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -193,6 +199,23 @@ model AdminInvite {
   createdAt DateTime @default(now())
 
   @@index([email])
+  @@index([expiresAt])
+}
+
+/// Single-use, hashed tokens tied to a user: email verification and password
+/// reset. Mirrors the AdminInvite pattern (SHA-256 at rest, TTL, single-use via
+/// `usedAt`). One generic table serves both purposes via `purpose`.
+model UserToken {
+  id        String       @id @default(cuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose   TokenPurpose
+  tokenHash String       @unique // hash of the one-time, URL-safe token
+  expiresAt DateTime
+  usedAt    DateTime? // set when consumed; null = still valid
+  createdAt DateTime     @default(now())
+
+  @@index([userId, purpose])
   @@index([expiresAt])
 }
 

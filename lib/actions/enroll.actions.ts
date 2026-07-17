@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { auth } from "@/lib/auth";
+import { isEmailVerified } from "@/lib/auth/access";
 import { writeAudit } from "@/lib/audit";
 import {
   DEFAULT_CURRENCY,
@@ -30,6 +31,9 @@ export async function saveEnrollment(
   const session = await auth();
   if (session?.user?.role !== ROLE.USER) {
     return { ok: false, error: "Sign in as a student to enroll." };
+  }
+  if (!(await isEmailVerified(session.user.id))) {
+    return { ok: false, error: "Please verify your email before enrolling." };
   }
 
   const parsed = EnrollSchema.safeParse(input);

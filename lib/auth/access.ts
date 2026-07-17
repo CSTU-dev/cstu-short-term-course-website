@@ -8,6 +8,19 @@ export function isSuperAdmin(session: Session | null): boolean {
 }
 
 /**
+ * Whether the user has confirmed their email. Read from the DB (not the JWT) so
+ * a verification completed mid-session takes effect immediately. Gates
+ * high-risk actions: enrolling, paying, and earning referral commissions.
+ */
+export async function isEmailVerified(userId: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { emailVerified: true },
+  });
+  return Boolean(user?.emailVerified);
+}
+
+/**
  * True if the session may edit a given course: superAdmins may edit any course;
  * admins only courses they are assigned to.
  */

@@ -4,11 +4,13 @@ import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { signIn, signOut } from "@/lib/auth";
+import { auth, signIn, signOut } from "@/lib/auth";
 import { hashPassword } from "@/lib/auth/password";
 import { ROLE_HOME } from "@/lib/constants";
 import { prisma } from "@/lib/db";
 import { createLogger } from "@/lib/logger";
+import { consumeUserToken } from "@/lib/tokens";
+import { sendVerificationEmail } from "@/lib/verification";
 
 const log = createLogger("auth-action");
 
@@ -39,10 +41,14 @@ export async function registerUser(
     return { error: "An account with this email already exists." };
   }
 
-  await prisma.user.create({
+  const user = await prisma.user.create({
     data: { email, name, passwordHash: await hashPassword(password), role: "USER" },
   });
-  log.info({ email }, "user registered");
+  log.info({ userId: user.id }, "user registered");
+
+  // Send the verification link. Users may still sign in, but enrolling/paying/
+  // referral earnings stay locked until they verify (see isEmailVerified).
+  await sendVerificationEmail(user.id, email);
 
   try {
     await signIn("credentials", {
@@ -101,6 +107,47 @@ export async function loginWithCredentials(
 export async function signInWithGoogle(formData: FormData) {
   const redirectTo = (formData.get("redirectTo") as string) || ROLE_HOME.USER;
   await signIn("google", { redirectTo });
+}
+
+/**
+ * Consume an email-verification token and mark the account verified. Idempotent
+ * from the user's view: an already-verified account reports success.
+ */
+export async function verifyEmail(
+  token: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const userId = await consumeUserToken(token, "EMAIL_VERIFICATION");
+  if (!userId) {
+    return { ok: false, error: "This verification link is invalid or expired." };
+  }
+  await prisma.user.update({
+    where: { id: userId },
+    data: { emailVerified: new Date() },
+  });
+  log.info({ userId }, "email verified");
+  return { ok: true };
+}
+
+/**
+ * Resend the verification email to the signed-in user. No-ops (reports success)
+ * if already verified. TODO: rate-limit per user/IP (security checklist #02).
+ */
+export async function resendVerification(): Promise<{
+  ok: boolean;
+  error?: string;
+}> {
+  const session = await auth();
+  if (!session?.user?.id || !session.user.email) {
+    return { ok: false, error: "Please sign in first." };
+  }
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { emailVerified: true },
+  });
+  if (user?.emailVerified) return { ok: true };
+
+  await sendVerificationEmail(session.user.id, session.user.email);
+  return { ok: true };
 }
 
 export async function logout() {

@@ -9,6 +9,7 @@ import { writeAudit } from "@/lib/audit";
 import { ROLE } from "@/lib/constants";
 import { prisma } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
+import { adminInviteEmail } from "@/lib/email-templates";
 import { env } from "@/lib/env";
 import { createLogger } from "@/lib/logger";
 import { hashToken } from "@/lib/tokens";
@@ -18,15 +19,6 @@ import type { ActionResult } from "./course.actions";
 const log = createLogger("admin-action");
 
 const INVITE_TTL_DAYS = 7;
-
-function inviteEmailHtml(courseTitle: string, inviteUrl: string): string {
-  return `
-    <p>You have been invited to be an admin for the course <strong>${courseTitle}</strong> on CSTU.</p>
-    <p>Sign in with this email address, then open the link below to accept:</p>
-    <p><a href="${inviteUrl}">${inviteUrl}</a></p>
-    <p>This invitation expires in ${INVITE_TTL_DAYS} days.</p>
-  `;
-}
 
 /**
  * Assign an admin to a course by email. If the user exists they're promoted to
@@ -111,8 +103,7 @@ export async function assignAdmin(
   const inviteUrl = `${env.NEXT_PUBLIC_BASE_URL}/invite/${token}`;
   const sent = await sendEmail({
     to: email,
-    subject: `You've been invited to admin "${course.title}" on CSTU`,
-    html: inviteEmailHtml(course.title, inviteUrl),
+    ...adminInviteEmail(course.title, inviteUrl, INVITE_TTL_DAYS),
   });
   log.info({ courseId, email, sent }, "admin invite created");
   revalidatePath(`/superAdmin/courses/${courseId}`);

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { auth } from "@/lib/auth";
+import { isEmailVerified } from "@/lib/auth/access";
 import { writeAudit } from "@/lib/audit";
 import { REFERRAL_MAX_EDITS_PER_DAY, ROLE } from "@/lib/constants";
 import { prisma } from "@/lib/db";
@@ -21,6 +22,9 @@ export async function changeReferralCode(
   const session = await auth();
   if (session?.user?.role !== ROLE.USER) {
     return { ok: false, error: "Not authorized" };
+  }
+  if (!(await isEmailVerified(session.user.id))) {
+    return { ok: false, error: "Please verify your email to manage referrals." };
   }
   const userId = session.user.id;
   const code = newCode.trim();
