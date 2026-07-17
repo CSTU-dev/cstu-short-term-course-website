@@ -9,6 +9,12 @@ import { hashPassword } from "@/lib/auth/password";
 import { ROLE_HOME } from "@/lib/constants";
 import { prisma } from "@/lib/db";
 import { createLogger } from "@/lib/logger";
+import {
+  clientIp,
+  rateLimit,
+  RATE_LIMITS,
+  retryAfterMessage,
+} from "@/lib/rate-limit";
 import { consumeUserToken } from "@/lib/tokens";
 import { sendVerificationEmail } from "@/lib/verification";
 
@@ -26,6 +32,14 @@ export async function registerUser(
   _prev: AuthFormState,
   formData: FormData,
 ): Promise<AuthFormState> {
+  const ip = await clientIp();
+  const limit = await rateLimit(`signup:ip:${ip}`, RATE_LIMITS.signup);
+  if (!limit.ok) {
+    return {
+      error: `Too many sign-up attempts. Try again in ${retryAfterMessage(limit.retryAfterSec)}.`,
+    };
+  }
+
   const parsed = RegisterSchema.safeParse({
     name: (formData.get("name") as string) || undefined,
     email: formData.get("email"),
@@ -75,6 +89,14 @@ export async function loginWithCredentials(
 
   if (!email || !password) {
     return { error: "Email and password are required." };
+  }
+
+  const ip = await clientIp();
+  const limit = await rateLimit(`login:ip:${ip}`, RATE_LIMITS.login);
+  if (!limit.ok) {
+    return {
+      error: `Too many login attempts. Try again in ${retryAfterMessage(limit.retryAfterSec)}.`,
+    };
   }
 
   try {
@@ -145,6 +167,17 @@ export async function resendVerification(): Promise<{
     select: { emailVerified: true },
   });
   if (user?.emailVerified) return { ok: true };
+
+  const limit = await rateLimit(
+    `resend-verify:user:${session.user.id}`,
+    RATE_LIMITS.resendVerification,
+  );
+  if (!limit.ok) {
+    return {
+      ok: false,
+      error: `Please wait ${retryAfterMessage(limit.retryAfterSec)} before requesting another email.`,
+    };
+  }
 
   await sendVerificationEmail(session.user.id, session.user.email);
   return { ok: true };

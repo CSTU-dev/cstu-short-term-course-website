@@ -219,6 +219,20 @@ model UserToken {
   @@index([expiresAt])
 }
 
+/// Fixed-window rate-limit counters, keyed by action + identifier (e.g.
+/// "login:ip:1.2.3.4"). Shared across Cloud Run instances via the DB. Counting
+/// is approximate (Read Committed) — minor overshoot under concurrency is fine
+/// for throttling. Active keys reset their window on the next hit after expiry;
+/// fully-idle keys linger until a periodic cleanup removes them (see #02).
+model RateLimit {
+  key       String   @id
+  count     Int      @default(0)
+  windowEnd DateTime
+  createdAt DateTime @default(now())
+
+  @@index([windowEnd])
+}
+
 // ------------------------------------------------------------
 // Course / Section / Assignment
 // ------------------------------------------------------------

@@ -12,6 +12,7 @@ import { sendEmail } from "@/lib/email";
 import { adminInviteEmail } from "@/lib/email-templates";
 import { env } from "@/lib/env";
 import { createLogger } from "@/lib/logger";
+import { rateLimit, RATE_LIMITS, retryAfterMessage } from "@/lib/rate-limit";
 import { hashToken } from "@/lib/tokens";
 
 import type { ActionResult } from "./course.actions";
@@ -80,7 +81,16 @@ export async function assignAdmin(
     return { ok: true, message: `${email} is now an admin for this course.` };
   }
 
-  // No account yet — create an invite.
+  // No account yet — create an invite. Throttle per target email so a repeated
+  // submit can't flood one inbox with invitation emails.
+  const limit = await rateLimit(`admin-invite:email:${email}`, RATE_LIMITS.adminInvite);
+  if (!limit.ok) {
+    return {
+      ok: false,
+      error: `Too many invites sent to ${email}. Try again in ${retryAfterMessage(limit.retryAfterSec)}.`,
+    };
+  }
+
   const token = nanoid(32);
   const expiresAt = new Date(Date.now() + INVITE_TTL_DAYS * 24 * 60 * 60 * 1000);
   await prisma.adminInvite.create({
