@@ -5,6 +5,7 @@ import type { RoleValue } from "@/lib/constants";
 declare module "next-auth" {
   interface User {
     role: RoleValue;
+    sessionVersion?: number;
   }
 
   interface Session {
@@ -19,5 +20,6 @@ declare module "next-auth/jwt" {
   interface JWT {
     id: string;
     role: RoleValue;
+    sessionVersion?: number;
   }
 }

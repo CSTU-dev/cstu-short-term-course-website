@@ -122,7 +122,7 @@ export async function assignAdmin(
     ...adminInviteEmail(course.title, inviteUrl, INVITE_TTL_DAYS),
   });
   log.info(
-    { courseId, email, sent, existingAccount: hasUnverifiedAccount },
+    { courseId, sent, existingAccount: hasUnverifiedAccount },
     "admin invite created",
   );
   revalidatePath(`/superAdmin/courses/${courseId}`);
@@ -143,7 +143,7 @@ export async function assignAdmin(
 export async function unassignAdmin(
   courseId: string,
   adminId: string,
-): Promise<ActionResult> {
+): Promise<ActionResult<{ noCoursesLeft: boolean }>> {
   const session = await auth();
   if (!isSuperAdmin(session)) return { ok: false, error: "Not authorized" };
 
@@ -159,6 +159,60 @@ export async function unassignAdmin(
     actorId: session!.user.id,
   });
   revalidatePath(`/superAdmin/courses/${courseId}`);
+
+  // Signal (don't act) when this admin no longer manages any course but is
+  // still ADMIN — the UI prompts the superAdmin to revoke the role explicitly
+  // (Z6). We deliberately do NOT auto-demote: removing a course to reassign it
+  // shouldn't silently strip the role and sign the person out.
+  const [remaining, target] = await Promise.all([
+    prisma.courseAssignment.count({ where: { adminId } }),
+    prisma.user.findUnique({ where: { id: adminId }, select: { role: true } }),
+  ]);
+  return {
+    ok: true,
+    noCoursesLeft: remaining === 0 && target?.role === ROLE.ADMIN,
+  };
+}
+
+/**
+ * Revoke a user's ADMIN role entirely (Z6). SUPER_ADMIN only. Sets role back to
+ * USER, removes every course assignment, and bumps `sessionVersion` so their
+ * outstanding admin sessions are invalidated on the next request (pairs with
+ * the stale-JWT fix). Refuses to touch a SUPER_ADMIN. Idempotent: a user who
+ * isn't an ADMIN is reported as already done.
+ */
+export async function demoteAdmin(adminId: string): Promise<ActionResult> {
+  const session = await auth();
+  if (!isSuperAdmin(session)) return { ok: false, error: "Not authorized" };
+
+  const user = await prisma.user.findUnique({ where: { id: adminId } });
+  if (!user) return { ok: false, error: "User not found" };
+  if (user.role === ROLE.SUPER_ADMIN) {
+    return { ok: false, error: "Cannot demote a super admin." };
+  }
+  if (user.role !== ROLE.ADMIN) {
+    return { ok: false, error: "This user is not an admin." };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: adminId },
+      data: { role: ROLE.USER, sessionVersion: { increment: 1 } },
+    });
+    await tx.courseAssignment.deleteMany({ where: { adminId } });
+    await writeAudit({
+      action: "ROLE_CHANGE",
+      entityType: "User",
+      entityId: adminId,
+      before: { role: ROLE.ADMIN },
+      after: { role: ROLE.USER },
+      actorId: session!.user.id,
+      client: tx,
+    });
+  });
+
+  log.info({ adminId }, "admin demoted to user");
+  revalidatePath("/superAdmin/courses");
   return { ok: true };
 }
 

@@ -1,6 +1,12 @@
 # Fix area: Payments & Stripe
 
-**Status:** **FAIL** on refunds / amount reconciliation / double-pay  
+**Status (2026-07-22):** Problem 1 (refund) **RESOLVED as ledger-only by product
+decision** — `recordManualRefund` is documented + UI relabeled "Record ledger
+adjustment" with a "does not move money — issue in Stripe" warning; N7 amount
+validation added. Problems 2 & 3 **FIXED** — `recordPayment` flags currency
+mismatch, amount-vs-net divergence, and duplicate payments (audit
+`PAYMENT_ANOMALY` + error log) and conversion is currency-aware (N8,
+`lib/payments/currency.ts`).  
 **Severity:** HIGH (manual refund) / MEDIUM (amount & double checkout)  
 **Related checklist IDs:** P5–P7  
 **Key files:** `lib/actions/payment.actions.ts`, `lib/payments/enrollment-state.ts`, `app/webhook/stripe/route.ts`
@@ -51,7 +57,7 @@ A user can create multiple Checkout Sessions for the same PENDING enrollment. Tw
 
 ## Acceptance criteria
 
-- [ ] Manual refund either hits Stripe or is explicitly non-monetary with UI warnings
-- [ ] Webhook validates amount against enrollment snapshot
-- [ ] Double successful payment cannot leave enrollment overpaid without automatic remediation
+- [x] Manual refund either hits Stripe or is explicitly non-monetary with UI warnings — ledger-only + warnings (2026-07-22)
+- [x] Webhook validates amount against enrollment snapshot — flags mismatch (2026-07-22)
+- [x] Double successful payment detected + flagged; no double commission (2026-07-22). *Note: overpayment is flagged for manual Stripe refund, not auto-remediated (ledger-only decision).*
 - [ ] Tests cover partial refund + already-paid race

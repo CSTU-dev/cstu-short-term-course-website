@@ -1,6 +1,8 @@
 # Fix area: Database & Docker exposure
 
-**Status:** **FAIL** if `docker-compose.yml` is used as-is outside trusted localhost  
+**Status:** **PARTIAL (2026-07-22)** — dev `docker-compose.yml` now binds
+`127.0.0.1` only (D2) with a warning comment that it's local-dev-only. Production
+credentials + managed/private DB (D1, D4) remain ops responsibilities.  
 **Severity:** HIGH (public/LAN exposure) / MEDIUM (weak local defaults)  
 **Related checklist IDs:** D1–D4, S5  
 **Key files:** `docker-compose.yml`, `.env.example`, `prisma/seed.ts`
@@ -57,5 +59,5 @@ Seed itself is fine: `SUPERADMIN_PASSWORD` comes from env and is bcrypt-hashed.
 
 - [ ] Production DB not reachable from the public internet
 - [ ] Production credentials ≠ `cstu`/`cstu`
-- [ ] Local compose bound to `127.0.0.1` (recommended)
+- [x] Local compose bound to `127.0.0.1` (done 2026-07-22)
 - [ ] Deploy docs state migrate strategy and backup ownership

@@ -1,11 +1,15 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
+import { ShieldOff, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { assignAdmin, unassignAdmin } from "@/lib/actions/admin.actions";
+import {
+  assignAdmin,
+  demoteAdmin,
+  unassignAdmin,
+} from "@/lib/actions/admin.actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -43,7 +47,32 @@ export function AdminAssignment({
         toast.error(res.error);
         return;
       }
-      toast.success("Admin removed");
+      toast.success("Admin removed from this course");
+      if (res.noCoursesLeft) {
+        toast.info(
+          "This admin no longer manages any course. Use “Revoke admin” to remove their admin role.",
+        );
+      }
+      router.refresh();
+    });
+  }
+
+  function revoke(admin: Assigned) {
+    const label = admin.name ? `${admin.name} (${admin.email})` : admin.email;
+    if (
+      !window.confirm(
+        `Revoke admin access for ${label}? This removes the ADMIN role and all course assignments across the whole site, and signs them out of admin sessions.`,
+      )
+    ) {
+      return;
+    }
+    startTransition(async () => {
+      const res = await demoteAdmin(admin.adminId);
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success("Admin role revoked");
       router.refresh();
     });
   }
@@ -65,15 +94,29 @@ export function AdminAssignment({
                 {admin.name ? `${admin.name} · ` : ""}
                 {admin.email}
               </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => remove(admin.adminId)}
-                disabled={pending}
-                aria-label="Remove admin"
-              >
-                <Trash2 className="size-4" />
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => remove(admin.adminId)}
+                  disabled={pending}
+                  aria-label="Remove from this course"
+                  title="Remove from this course"
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => revoke(admin)}
+                  disabled={pending}
+                  aria-label="Revoke admin role (site-wide)"
+                  title="Revoke admin role (site-wide)"
+                  className="text-destructive hover:text-destructive"
+                >
+                  <ShieldOff className="size-4" />
+                </Button>
+              </div>
             </li>
           ))
         )}

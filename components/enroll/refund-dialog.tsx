@@ -43,7 +43,7 @@ export function RefundDialog({
         return;
       }
       setOpen(false);
-      toast.success("Refund recorded");
+      toast.success("Ledger adjustment recorded — issue the refund in Stripe");
       router.refresh();
     });
   }
@@ -51,13 +51,18 @@ export function RefundDialog({
   return (
     <>
       <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-        Refund
+        Record adjustment
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Record refund</DialogTitle>
+            <DialogTitle>Record ledger adjustment</DialogTitle>
           </DialogHeader>
+          <div className="border-destructive/30 bg-destructive/5 text-muted-foreground rounded-md border p-3 text-xs">
+            This records the refund in our books only — it does{" "}
+            <strong>not</strong> return money to the customer. Issue the actual
+            refund in the Stripe Dashboard.
+          </div>
           <form onSubmit={submit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="refund-amount">Amount ({currency})</Label>
@@ -95,7 +100,7 @@ export function RefundDialog({
                 Cancel
               </Button>
               <Button type="submit" disabled={pending}>
-                {pending ? "Recording…" : "Record refund"}
+                {pending ? "Recording…" : "Record adjustment"}
               </Button>
             </DialogFooter>
           </form>

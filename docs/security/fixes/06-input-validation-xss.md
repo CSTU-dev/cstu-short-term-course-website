@@ -1,6 +1,9 @@
 # Fix area: Input validation — video URL / stored XSS
 
-**Status:** **FAIL**  
+**Status:** **FIXED (2026-07-22)** — `lib/validations/course.ts` now uses a
+shared `httpsUrl()` refine for `videoUrl`, `zoomLink`, and `ZoomLinkSchema`;
+non-`https:` schemes (`javascript:`, `data:`, …) are rejected at validation
+time (`http://localhost` allowed for dev only).  
 **Severity:** MEDIUM  
 **Related checklist IDs:** V4  
 **Key files:** `lib/validations/course.ts`, `app/(user)/my/courses/[id]/page.tsx`
@@ -41,6 +44,6 @@ videoUrl: z
 
 ## Acceptance criteria
 
-- [ ] Non-https schemes rejected at validation time
-- [ ] Existing bad data cleaned or blocked at render time
+- [x] Non-https schemes rejected at validation time — 2026-07-22 (`httpsUrl()`)
+- [ ] Existing bad data cleaned or blocked at render time — validation gates new writes; no backfill of any pre-existing rows
 - [ ] Unit tests for `javascript:` / `data:` rejection

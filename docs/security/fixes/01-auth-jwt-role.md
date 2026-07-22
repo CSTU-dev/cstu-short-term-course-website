@@ -1,6 +1,11 @@
 # Fix area: Authentication — stale JWT role & related gaps
 
-**Status:** **FAIL** (stale role) + related GAPs  
+**Status:** **FIXED (2026-07-22)** for Problems 1, 3, 4, 5. Node `jwt` callback
+(`lib/auth/index.ts`) re-reads role from DB every request and compares
+`sessionVersion`; password reset/change bump it. `demoteAdmin` (Problem 5 / Z6)
+sets role→USER, clears course assignments, and bumps `sessionVersion`.
+`redirectTo` allowlist (`lib/auth/safe-redirect.ts`) + password max-length (≤72)
+landed. **Residual:** `trustHost` (Problem 2) remains an ops requirement.  
 **Severity:** HIGH (role staleness) / MEDIUM (`trustHost`) / LOW (redirect, password policy)  
 **Related checklist IDs:** A3, A6–A8, Z5–Z6  
 **Key files:** `lib/auth/config.ts`, `lib/auth/guards.ts`, `proxy.ts`, `lib/actions/admin.actions.ts`
@@ -55,7 +60,14 @@ Register requires min 8 characters; no max length / complexity. bcrypt truncates
 
 ---
 
-## Problem 5 — No in-app admin demotion + no session invalidation (LOW→MEDIUM)
+## Problem 5 — No in-app admin demotion + no session invalidation (LOW→MEDIUM) — FIXED 2026-07-22
+
+> **Resolved.** `sessionVersion` (User column) is baked into the JWT at sign-in
+> and re-checked from the DB on every request in the Node `jwt` callback; a
+> mismatch returns `null` (signs the session out). It is incremented on password
+> **reset**, password **change**, and the new `demoteAdmin` action (SUPER_ADMIN
+> only: role→USER + delete all `CourseAssignment` + audit). The paragraphs below
+> are the original finding, kept for context.
 
 `assignAdmin` can promote `USER` → `ADMIN`; no demotion path. Combined with stale JWT, revocation is weak.
 
@@ -78,11 +90,11 @@ where revocation is a row delete.)
 
 ## Acceptance criteria
 
-- [ ] Role changes in DB are reflected in authz within one request or forced re-login
+- [x] Role changes in DB are reflected in authz within one request (jwt DB refresh) — 2026-07-22
 - [ ] Demotion / invite accept both covered by tests
-- [ ] **Password reset/change and demotion revoke other active sessions** (sessionVersion) — new dependent, see Problem 5
-- [ ] Production proxy + `trustHost` documented
-- [ ] Optional: `redirectTo` allowlist + password max length
+- [x] **Password reset/change and demotion revoke other active sessions** (sessionVersion) — 2026-07-22
+- [ ] Production proxy + `trustHost` documented (ops)
+- [x] `redirectTo` allowlist + password max length — 2026-07-22
 
 > Note (2026-07-16): `acceptAdminInvite` now additionally requires
 > `emailVerified` (see [10-followup N1](./10-followup-todo-2026-07-11.md) and

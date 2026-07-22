@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 
 import { auth } from "@/lib/auth";
 import { canManageCourse, isEmailVerified } from "@/lib/auth/access";
@@ -88,6 +89,22 @@ export async function createCheckoutSession(
   return { ok: true, url: checkout.url };
 }
 
+// Guard the raw client number at the boundary: a NaN/Infinity would slip past
+// the `<= 0` / `>` comparisons in recordRefund and only fail at the DB (N7).
+const RefundAmountSchema = z
+  .number()
+  .finite("Enter a valid refund amount.")
+  .positive("Enter a refund amount greater than zero.")
+  .max(1_000_000, "Refund amount is too large.");
+
+/**
+ * Record a **ledger-only** refund/adjustment. This does NOT move money — it
+ * does not call the Stripe refund API. The actual refund must be issued
+ * separately in the Stripe Dashboard. It writes our internal ledger (refund
+ * row, transaction, proportional commission clawback) and is authorized via
+ * canManageCourse. Kept ledger-only by product decision (2026-07-22); see
+ * docs/security/fixes/03-payments-stripe.md.
+ */
 export async function recordManualRefund(
   enrollmentId: string,
   amount: number,
@@ -102,10 +119,15 @@ export async function recordManualRefund(
     return { ok: false, error: "Not authorized" };
   }
 
+  const parsedAmount = RefundAmountSchema.safeParse(amount);
+  if (!parsedAmount.success) {
+    return { ok: false, error: parsedAmount.error.issues[0]!.message };
+  }
+
   try {
     await recordRefund({
       enrollmentId,
-      amount,
+      amount: parsedAmount.data,
       reason,
       operatorId: session!.user.id,
     });

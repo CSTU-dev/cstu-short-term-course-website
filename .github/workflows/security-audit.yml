@@ -1,0 +1,25 @@
+# Supply-chain vulnerability scan (Dep3). Fails the build on a high/critical
+# advisory in the production dependency tree. Runs on PRs, pushes to main, and
+# weekly (so a newly-disclosed CVE in an unchanged dep still surfaces).
+name: security-audit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Non-prod (dev-only) advisories shouldn't block a deploy; scan prod deps.
+      - run: pnpm audit --prod --audit-level=high

@@ -85,6 +85,7 @@ enum AuditAction {
   SECTION_REORDER
   ENROLLMENT_CREATE
   PAYMENT_RECORDED
+  PAYMENT_ANOMALY
   REFUND_RECORDED
   COMMISSION_REVERSED
   ROLE_CHANGE
@@ -110,6 +111,12 @@ model User {
 
   // Platform role: one account, one role
   role Role @default(USER)
+
+  // Bumped to revoke all outstanding JWT sessions at once. The value is baked
+  // into the token at sign-in and re-checked from the DB on every request (see
+  // the jwt callback in lib/auth/index.ts); a mismatch invalidates the session.
+  // Incremented on password change/reset and admin demotion.
+  sessionVersion Int @default(0)
 
   // Profile (my/info), all optional, kept separate from enrollment snapshots
   profileName    String?
