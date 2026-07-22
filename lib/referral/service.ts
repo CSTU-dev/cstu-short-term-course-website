@@ -69,6 +69,34 @@ export async function recordReferralClick(code: string, courseSlug?: string) {
   return { valid: true as const };
 }
 
+/**
+ * Focused referral summary for a single course — powers the share widget shown
+ * on the course detail page. Ensures the user has a primary code, builds the
+ * course-specific link, and returns this course's stats only.
+ */
+export async function getCourseReferralSummary(
+  userId: string,
+  courseId: string,
+  courseSlug: string,
+) {
+  const [primary, stat] = await Promise.all([
+    ensurePrimaryReferralCode(userId),
+    prisma.referralCourseStat.findUnique({
+      where: { userId_courseId: { userId, courseId } },
+    }),
+  ]);
+
+  return {
+    code: primary.code,
+    link: buildReferralLink(primary.code, courseSlug),
+    stats: {
+      clicks: stat?.clicks ?? 0,
+      conversions: stat?.conversions ?? 0,
+      commission: Number(stat?.commissionTotal ?? 0),
+    },
+  };
+}
+
 /** Full data for the /my/referrals page. */
 export async function getReferralOverview(userId: string) {
   const [primary, codes, stats, enabledCourses] = await Promise.all([

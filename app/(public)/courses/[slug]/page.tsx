@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { CoursePaymentSection } from "@/components/courses/course-payment-section";
+import { CourseReferralSection } from "@/components/courses/course-referral-section";
 import { Badge } from "@/components/ui/badge";
 import { Eyebrow } from "@/components/ui/typography";
 import {
@@ -29,8 +30,9 @@ export default async function CourseDetailPage({
   if (!course) notFound();
 
   // A course may ship its own bespoke detail page (see courses/_custom).
-  // The pricing + enroll area is appended below the content for every course,
-  // custom or default, so it stays consistent and can't be forgotten.
+  // The pricing + enroll area and the referral area are appended below the
+  // content for every course, custom or default, so they stay consistent and
+  // can't be forgotten. (CourseReferralSection renders only for signed-in users.)
   const Custom = customDetailPages[course.slug];
   return (
     <>
@@ -40,6 +42,7 @@ export default async function CourseDetailPage({
         <DefaultCourseDetail course={course} />
       )}
       <CoursePaymentSection course={course} />
+      <CourseReferralSection course={course} />
     </>
   );
 }
