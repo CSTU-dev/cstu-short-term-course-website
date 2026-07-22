@@ -3,7 +3,7 @@ import Link from "next/link";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { buttonVariants } from "@/components/ui/button";
 import { auth } from "@/lib/auth";
-import { BASE_LINKS, ROLE, ROLE_HOME, type NavLink } from "@/lib/constants";
+import { BASE_LINKS, ROLE_HOME, type NavLink } from "@/lib/constants";
 
 import { Logo } from "./logo";
 import { MobileNav } from "./mobile-nav";
@@ -21,13 +21,6 @@ export async function PublicHeader() {
 
   if (!session) {
     authButtons = true;
-  } else if (role === ROLE.USER) {
-    rightLinks = [
-      { label: "Referrals", href: "/my/referrals" },
-      { label: "Info", href: "/my/info" },
-      { label: "My Courses", href: "/my/courses" },
-    ];
-    showLogout = true;
   } else {
     rightLinks = [
       { label: "Dashboard", href: role ? ROLE_HOME[role] : "/" },
