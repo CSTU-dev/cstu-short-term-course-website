@@ -1,4 +1,3 @@
-import { EnrollOptions } from "@/components/courses/enroll-options";
 import { Badge } from "@/components/ui/badge";
 import { COURSE_MODE_LABELS } from "@/lib/constants";
 import { availableModes } from "@/lib/courses";
@@ -9,8 +8,8 @@ import type { CustomDetailProps } from "./registry";
 /**
  * Bespoke detail page for the `demo` course — a template for building custom,
  * marketing-style course pages. Lay out whatever hero / sections / copy you
- * like, then drop in <EnrollOptions course={course} /> for the pricing +
- * enroll entries so online/offline links stay in sync with the shared logic.
+ * like; the pricing + enroll area is appended automatically below by the route
+ * (see courses/[slug]/page.tsx), so you don't add it here.
  */
 export function DemoDetail({ course }: CustomDetailProps) {
   return (
@@ -88,15 +87,6 @@ export function DemoDetail({ course }: CustomDetailProps) {
             </p>
           </section>
         ) : null}
-
-        {/* Pricing + enroll */}
-        <section>
-          <h2 className="text-2xl font-semibold">Choose how to attend</h2>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Pick the format that works for you — you can switch before you pay.
-          </p>
-          <EnrollOptions course={course} className="mt-6" />
-        </section>
       </div>
     </div>
   );
