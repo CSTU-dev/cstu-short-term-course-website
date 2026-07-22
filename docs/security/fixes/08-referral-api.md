@@ -1,6 +1,10 @@
 # Fix area: Referral click API & invite token hygiene
 
-**Status:** **FAIL** / GAP  
+**Status:** **FIXED (2026-07-22)** for Problems 1 & 3 — per-IP rate limit
+(30/min) + Zod body validation on `POST /api/referral/click`. Problem 4
+mitigated by the new `Referrer-Policy` header (see 04). **Residual:** Problem 2
+(the `{valid}` existence oracle, LOW) is unchanged — the client needs the
+boolean; it's now throttled behind the IP limit.  
 **Severity:** LOW–MEDIUM  
 **Related checklist IDs:** C4, R2, T2–T3, V5  
 **Key files:** `app/api/referral/click/route.ts`, `lib/referral/*`, invite accept pages
@@ -45,7 +49,7 @@ Invite tokens appear in `/invite/[token]`. If the invitee navigates to a third-p
 
 ## Acceptance criteria
 
-- [ ] Click endpoint rate-limited
-- [ ] No useful code-existence oracle (or throttled heavily)
-- [ ] Request body validated with Zod
-- [ ] Referrer-Policy deployed to reduce invite token leakage
+- [x] Click endpoint rate-limited — 30/min per IP (2026-07-22)
+- [x] No useful code-existence oracle (or throttled heavily) — still returns `{valid}` but behind the IP limit (2026-07-22)
+- [x] Request body validated with Zod — 2026-07-22
+- [x] Referrer-Policy deployed to reduce invite token leakage — `strict-origin-when-cross-origin` (2026-07-22, see 04)

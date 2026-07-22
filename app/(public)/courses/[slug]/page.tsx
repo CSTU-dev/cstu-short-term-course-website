@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
-import { EnrollOptions } from "@/components/courses/enroll-options";
+import { CoursePaymentSection } from "@/components/courses/course-payment-section";
+import { CourseReferralSection } from "@/components/courses/course-referral-section";
 import { Badge } from "@/components/ui/badge";
 import { Eyebrow } from "@/components/ui/typography";
 import {
@@ -29,10 +30,21 @@ export default async function CourseDetailPage({
   if (!course) notFound();
 
   // A course may ship its own bespoke detail page (see courses/_custom).
+  // The pricing + enroll area and the referral area are appended below the
+  // content for every course, custom or default, so they stay consistent and
+  // can't be forgotten. (CourseReferralSection renders only for signed-in users.)
   const Custom = customDetailPages[course.slug];
-  if (Custom) return <Custom course={course} />;
-
-  return <DefaultCourseDetail course={course} />;
+  return (
+    <>
+      {Custom ? (
+        <Custom course={course} />
+      ) : (
+        <DefaultCourseDetail course={course} />
+      )}
+      <CoursePaymentSection course={course} />
+      <CourseReferralSection course={course} />
+    </>
+  );
 }
 
 /** The default detail layout, used when a course has no custom template. */
@@ -64,10 +76,6 @@ function DefaultCourseDetail({ course }: { course: PublicCourseDetail }) {
             {course.sections.length === 1 ? "" : "s"}. Full course materials are
             available after enrollment.
           </p>
-          <div className="border-t border-border pt-6">
-            <h2 className="eyebrow mb-4">Choose how to attend</h2>
-            <EnrollOptions course={course} />
-          </div>
         </CardContent>
       </Card>
     </div>

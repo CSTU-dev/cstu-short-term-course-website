@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { env } from "@/lib/env";
 import { createLogger } from "@/lib/logger";
+import { fromStripeMinorUnits } from "@/lib/payments/currency";
 import { recordPayment } from "@/lib/payments/enrollment-state";
 import { stripe } from "@/lib/payments/stripe";
 
@@ -58,9 +59,10 @@ export async function POST(req: Request) {
           provider: "stripe",
           externalId: paymentIntentId,
           amount:
-            session.amount_total != null
-              ? session.amount_total / 100
+            session.amount_total != null && session.currency
+              ? fromStripeMinorUnits(session.amount_total, session.currency)
               : undefined,
+          currency: session.currency ?? undefined,
           actorId: null,
         });
       } catch (error) {

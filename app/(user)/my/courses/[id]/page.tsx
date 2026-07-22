@@ -75,6 +75,27 @@ export default async function MyCourseDetailPage({
         </div>
       ) : null}
 
+      {isPaid && course.zoomLink ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Live session</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between gap-4">
+            <p className="text-muted-foreground text-sm">
+              Join the course meeting on Zoom.
+            </p>
+            <a
+              href={course.zoomLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={buttonVariants()}
+            >
+              Join Zoom meeting
+            </a>
+          </CardContent>
+        </Card>
+      ) : null}
+
       {isPaid ? (
         <Card>
           <CardHeader>

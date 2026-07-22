@@ -27,6 +27,8 @@ export async function recordPayment(params: {
   enrollmentId: string;
   provider: string;
   amount?: number;
+  /** ISO currency reported by the provider, for cross-checking (N8). */
+  currency?: string;
   externalId?: string;
   actorId?: string | null;
 }) {
@@ -45,11 +47,52 @@ export async function recordPayment(params: {
       return { alreadyProcessed: true as const };
     }
 
-    const netPrice = Number(e.listPrice) - Number(e.discountAmount);
+    const netPrice = round2(Number(e.listPrice) - Number(e.discountAmount));
     const amount = params.amount ?? netPrice;
     const wasPaid = Number(e.amountPaid) > 0;
     const newPaid = round2(Number(e.amountPaid) + amount);
     const status = deriveStatus(newPaid, Number(e.amountRefunded));
+
+    // ---- Reconciliation guards (P6/P7/N8) --------------------------------
+    // The money already moved by the time this webhook fires, so we never
+    // reject — we record faithfully but flag anomalies loudly for ops. Checkout
+    // is server-priced (P3), so any of these signals a bug or tampering.
+    const anomalies: string[] = [];
+    if (
+      params.currency &&
+      params.currency.toUpperCase() !== e.currency.toUpperCase()
+    ) {
+      anomalies.push(
+        `currency mismatch: got ${params.currency}, expected ${e.currency}`,
+      );
+    }
+    // Expect the paid amount to match the outstanding net price (± 1 cent).
+    if (params.amount != null && Math.abs(amount - netPrice) > 0.01) {
+      anomalies.push(
+        `amount mismatch: got ${amount}, expected ${netPrice}`,
+      );
+    }
+    // A second successful payment on an already-paid enrollment → likely a
+    // duplicate Checkout Session. Recorded truthfully (amountPaid reflects the
+    // real charge; commission is not double-counted below), but must be
+    // refunded manually in Stripe.
+    if (wasPaid) {
+      anomalies.push("duplicate payment on an already-paid enrollment");
+    }
+    if (anomalies.length > 0) {
+      log.error(
+        { enrollmentId: e.id, externalId, amount, anomalies },
+        "payment anomaly — records written, ops action required",
+      );
+      await writeAudit({
+        action: "PAYMENT_ANOMALY",
+        entityType: "Enrollment",
+        entityId: e.id,
+        after: { externalId, amount, currency: params.currency, anomalies },
+        actorId: params.actorId ?? null,
+        client: tx,
+      });
+    }
 
     await tx.transaction.create({
       data: {

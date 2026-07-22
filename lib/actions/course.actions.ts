@@ -10,6 +10,7 @@ import { createLogger } from "@/lib/logger";
 import {
   CourseFormSchema,
   SectionFormSchema,
+  ZoomLinkSchema,
   type CourseInput,
   type SectionInput,
 } from "@/lib/validations/course";
@@ -51,6 +52,7 @@ export async function createCourse(
       hasOffline: data.hasOffline,
       onlinePrice: data.hasOnline ? data.onlinePrice : null,
       offlinePrice: data.hasOffline ? data.offlinePrice : null,
+      zoomLink: data.zoomLink,
       enabled: false,
     },
   });
@@ -98,6 +100,7 @@ export async function updateCourse(
       hasOffline: data.hasOffline,
       onlinePrice: data.hasOnline ? data.onlinePrice : null,
       offlinePrice: data.hasOffline ? data.offlinePrice : null,
+      zoomLink: data.zoomLink,
     },
   });
 
@@ -106,6 +109,40 @@ export async function updateCourse(
     entityType: "Course",
     entityId: courseId,
     after: { title: data.title, slug: data.slug },
+    actorId: session!.user.id,
+  });
+  revalidateCourse(courseId);
+  return { ok: true };
+}
+
+/**
+ * Update only the Zoom link. Scoped edit path for admins (who have no full course
+ * form) as well as superAdmins. Authorized via canManageCourse.
+ */
+export async function updateCourseZoomLink(
+  courseId: string,
+  zoomLink: string | null,
+): Promise<ActionResult> {
+  const session = await auth();
+  if (!(await canManageCourse(session, courseId))) {
+    return { ok: false, error: "Not authorized" };
+  }
+
+  const normalized = zoomLink?.trim() ? zoomLink.trim() : null;
+  const parsed = ZoomLinkSchema.safeParse(normalized);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  await prisma.course.update({
+    where: { id: courseId },
+    data: { zoomLink: parsed.data },
+  });
+  await writeAudit({
+    action: "COURSE_UPDATE",
+    entityType: "Course",
+    entityId: courseId,
+    after: { zoomLink: parsed.data },
     actorId: session!.user.id,
   });
   revalidateCourse(courseId);

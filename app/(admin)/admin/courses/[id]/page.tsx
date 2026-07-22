@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { SectionListEditor } from "@/components/courses/section-list-editor";
+import { ZoomLinkEditor } from "@/components/courses/zoom-link-editor";
 import { RefundDialog } from "@/components/enroll/refund-dialog";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -74,6 +75,15 @@ export default async function AdminCourseDetailPage({
               value={formatCurrency(Number(course.offlinePrice ?? 0))}
             />
           ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Zoom link</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ZoomLinkEditor courseId={course.id} zoomLink={course.zoomLink} />
         </CardContent>
       </Card>
 

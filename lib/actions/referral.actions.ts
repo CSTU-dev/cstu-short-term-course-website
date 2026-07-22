@@ -7,7 +7,7 @@ import { isEmailVerified } from "@/lib/auth/access";
 import { writeAudit } from "@/lib/audit";
 import { REFERRAL_MAX_EDITS_PER_DAY, ROLE } from "@/lib/constants";
 import { prisma } from "@/lib/db";
-import { REFERRAL_CODE_REGEX } from "@/lib/referral/code";
+import { isReservedReferralCode, REFERRAL_CODE_REGEX } from "@/lib/referral/code";
 
 import type { ActionResult } from "./course.actions";
 
@@ -32,6 +32,9 @@ export async function changeReferralCode(
   if (!REFERRAL_CODE_REGEX.test(code)) {
     return { ok: false, error: "Use 4–32 letters, numbers, - or _." };
   }
+  if (isReservedReferralCode(code)) {
+    return { ok: false, error: "That code is reserved. Please choose another." };
+  }
 
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
@@ -44,7 +47,11 @@ export async function changeReferralCode(
         throw new Error("RATE_LIMIT");
       }
 
-      const clash = await tx.referralCode.findUnique({ where: { code } });
+      // Case-insensitive uniqueness so "ABC" and "abc" can't both exist and
+      // create confusing/collidable share links (N6).
+      const clash = await tx.referralCode.findFirst({
+        where: { code: { equals: code, mode: "insensitive" } },
+      });
       if (clash) throw new Error("TAKEN");
 
       await tx.referralCode.updateMany({

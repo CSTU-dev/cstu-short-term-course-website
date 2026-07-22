@@ -37,6 +37,9 @@ export const env = createEnv({
     LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
       .optional(),
+    // Shared secret for authenticated cron endpoints (e.g. Cloud Scheduler →
+    // /api/cron/*). When unset those routes refuse to run (fail closed).
+    CRON_SECRET: z.string().min(1).optional(),
   },
   client: {
     // Base URL used to build absolute referral links / QR codes.
@@ -60,6 +63,7 @@ export const env = createEnv({
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
     LOG_LEVEL: process.env.LOG_LEVEL,
+    CRON_SECRET: process.env.CRON_SECRET,
     NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL,
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:
       process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,

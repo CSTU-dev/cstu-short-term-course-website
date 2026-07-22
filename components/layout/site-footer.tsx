@@ -39,14 +39,14 @@ export function SiteFooter() {
           <ul className="space-y-2 text-sm text-neutral-500">
             <li>
               <a
-                href="mailto:admissions@cstu.edu"
+                href="mailto:admission@cstu.edu"
                 className="text-primary transition-opacity hover:opacity-75"
               >
-                admissions@cstu.edu
+                admission@cstu.edu
               </a>
             </li>
-            <li>+1 (000) 000-0000</li>
-            <li>1 Education Way, Milpitas, CA</li>
+            <li>+1(408) 400 - 3948</li>
+            <li>1601 McCarthy Boulevard, Milpitas, CA 95035</li>
           </ul>
         </div>
 

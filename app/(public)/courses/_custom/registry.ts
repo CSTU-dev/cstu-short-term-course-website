@@ -12,8 +12,9 @@ export type CustomDetailProps = { course: PublicCourseDetail };
  * here, `/courses/[slug]` renders this component instead of the default layout.
  *
  * To add a bespoke page for a course:
- *   1. Copy `demo.tsx` to `<slug>.tsx` and adapt the layout. Reuse the shared
- *      `<EnrollOptions course={course} />` so pricing/enroll links stay correct.
+ *   1. Copy `demo.tsx` to `<slug>.tsx` and adapt the layout. Only build the
+ *      marketing content — the pricing/enroll area is appended automatically
+ *      below your template by `/courses/[slug]` (see CoursePaymentSection).
  *   2. Register it below: `"<slug>": YourDetail`.
  */
 export const customDetailPages: Record<

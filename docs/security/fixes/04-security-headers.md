@@ -1,6 +1,11 @@
 # Fix area: HTTP security headers
 
-**Status:** **FAIL**  
+**Status:** **PARTIAL (2026-07-22)** — baseline headers now set in
+`next.config.ts` (`X-Content-Type-Options: nosniff`, `Referrer-Policy:
+strict-origin-when-cross-origin`, `X-Frame-Options: DENY`, `Permissions-Policy`,
+and prod-only HSTS). **Residual:** an enforced `Content-Security-Policy` is
+deferred — it needs Stripe Checkout + Google OAuth tuning and staging
+verification before enforcing (start report-only).  
 **Severity:** MEDIUM  
 **Related checklist IDs:** H1–H2  
 **Key file:** `next.config.ts` (currently empty of headers)
@@ -51,7 +56,7 @@ Also terminate TLS at the edge and redirect HTTP → HTTPS.
 
 ## Acceptance criteria
 
-- [ ] Baseline headers present on HTML responses
-- [ ] CSP does not break Stripe Checkout / OAuth (test both)
-- [ ] HSTS enabled only when HTTPS is correctly configured
+- [x] Baseline headers present on HTML responses — 2026-07-22 (`next.config.ts`)
+- [ ] CSP does not break Stripe Checkout / OAuth (test both) — CSP deferred
+- [x] HSTS enabled only when HTTPS is correctly configured — prod-only (`NODE_ENV === "production"`)
 - [ ] Document whether headers are set in Next vs reverse proxy (avoid duplicates/conflicts)

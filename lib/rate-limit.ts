@@ -24,6 +24,7 @@ export const RATE_LIMITS = {
   adminInvite: { limit: 5, windowMs: 60 * 60_000 }, // 5 / h per target email
   passwordResetIp: { limit: 5, windowMs: 15 * 60_000 }, // 5 / 15 min per IP
   passwordResetEmail: { limit: 3, windowMs: 60 * 60_000 }, // 3 / h per email
+  referralClick: { limit: 30, windowMs: 60_000 }, // 30 / min per IP
 } as const satisfies Record<string, RateLimitRule>;
 
 /**
@@ -73,15 +74,37 @@ export async function rateLimit(
 }
 
 /**
- * Best-effort client IP from proxy headers (Cloud Run sets `x-forwarded-for`).
- * Falls back to a constant so a missing header degrades to a shared bucket
- * rather than throwing.
+ * Best-effort client IP from a `Headers` object (Cloud Run sets
+ * `x-forwarded-for`). Falls back to a constant so a missing header degrades to a
+ * shared bucket rather than throwing. Works in any runtime given a `Headers`.
  */
-export async function clientIp(): Promise<string> {
-  const h = await headers();
+export function ipFromHeaders(h: Headers): string {
   const fwd = h.get("x-forwarded-for");
   if (fwd) return fwd.split(",")[0]!.trim();
   return h.get("x-real-ip")?.trim() || "unknown";
+}
+
+/**
+ * Best-effort client IP for Server Actions / RSC, reading the request headers
+ * via `next/headers`. Prefer {@link ipFromHeaders} when you already hold a
+ * `Headers` (route handlers, Auth.js `authorize`).
+ */
+export async function clientIp(): Promise<string> {
+  return ipFromHeaders(await headers());
+}
+
+/**
+ * Delete rate-limit rows whose window has fully elapsed (N11). Active keys reset
+ * their own window on the next hit, but keys that never recur leave dead rows
+ * that would otherwise accumulate unbounded. Safe to run any time — a later hit
+ * re-creates the row via upsert. Intended to be called from a scheduled cron
+ * route. Returns the number of rows removed.
+ */
+export async function cleanupRateLimits(): Promise<number> {
+  const { count } = await prisma.rateLimit.deleteMany({
+    where: { windowEnd: { lt: new Date() } },
+  });
+  return count;
 }
 
 /** Human-friendly "try again in …" fragment for error messages. */

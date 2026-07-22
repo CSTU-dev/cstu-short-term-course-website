@@ -1,6 +1,8 @@
 # Fix area: Rate limiting & brute-force protection
 
-**Status:** **PARTIAL** (app/action-level done 2026-07-16; native callback path + cleanup open)  
+**Status:** **DONE** for the brute-force surface (2026-07-16 action-level +
+2026-07-22 native `authorize` path, N4, N5). **Residual:** `RateLimit`
+stale-row cleanup (N11) and signup email enumeration (R4).  
 **Severity:** HIGH (login/signup) / LOW (email enumeration)  
 **Related checklist IDs:** A4, R1, R4  
 **Key files:** `lib/rate-limit.ts`, `lib/actions/auth.actions.ts`, `lib/actions/admin.actions.ts`, `lib/auth/index.ts`, Auth.js credentials `authorize`
@@ -45,22 +47,20 @@ Enumeration: `requestPasswordReset` now returns a **uniform** response
 regardless of account existence. Signup still returns "email already exists"
 (open — see below); login timing oracle (N4) also still open.
 
-## Residual gaps (open)
+## Residual gaps
 
-1. **Native `/api/auth/*` callback path is NOT throttled.** The limiter sits in
-   the `loginWithCredentials` *server action*; a direct `POST` to
-   `/api/auth/callback/credentials` reaches `authorize` in `lib/auth/index.ts`
-   and **bypasses it**. Fix: rate-limit inside the `authorize` callback — the one
-   choke point all credential paths funnel through. Auth.js v5 passes `request`
-   as the 2nd arg to `authorize`, so IP (+ email) keys are available there.
-   Optionally add an edge/WAF limit (Cloud Armor) on `/api/auth/*` as
-   defense-in-depth. (Middleware can't host the DB limiter: it runs on the Edge
-   runtime, which can't reach Postgres.)
-2. **`RateLimit` stale-row cleanup.** Active keys reset their window on the next
-   hit, but keys that never recur leave dead rows → unbounded table growth.
-   Add a periodic `DELETE FROM "RateLimit" WHERE "windowEnd" < now()` (Cloud
-   Scheduler → protected route, or `pg_cron`). Deleting expired rows is safe: the
-   next hit re-creates them via upsert.
+1. ~~**Native `/api/auth/*` callback path is NOT throttled.**~~ **FIXED
+   2026-07-22.** The limit now lives inside the `authorize` callback in
+   `lib/auth/index.ts` (keyed by IP from the `request` arg, sharing the
+   `login:ip:<ip>` bucket), so the direct `POST /api/auth/callback/credentials`
+   is covered too. `authorize` also Zod-validates credentials (N5) and runs a
+   constant-time dummy bcrypt compare when the user is absent (N4). An edge/WAF
+   limit (Cloud Armor) is still worth adding as defense-in-depth.
+2. ~~**`RateLimit` stale-row cleanup.**~~ **FIXED 2026-07-22.** `cleanupRateLimits()`
+   (`lib/rate-limit.ts`) deletes rows with `windowEnd < now()`, exposed via the
+   protected cron route `GET/POST /api/cron/cleanup-rate-limits` (requires
+   `Authorization: Bearer <CRON_SECRET>`; fails closed when `CRON_SECRET` is
+   unset). **Ops:** point a daily Cloud Scheduler job at it.
 
 ---
 
@@ -81,7 +81,7 @@ regardless of account existence. Signup still returns "email already exists"
 
 - [x] Sustained login attempts from one IP are throttled — 10/min per IP (action-level)
 - [x] Signup similarly throttled — 5/min per IP
-- [ ] **Native `/api/auth/*` credential path throttled** (residual #1 — move limit into `authorize`)
-- [ ] **`RateLimit` stale-row cleanup job** (residual #2)
+- [x] **Native `/api/auth/*` credential path throttled** (2026-07-22 — limit moved into `authorize`)
+- [x] **`RateLimit` stale-row cleanup job** (2026-07-22 — `/api/cron/cleanup-rate-limits`; needs a Scheduler trigger)
 - [ ] Reduce email enumeration signals — PARTIAL: password-reset uniform (done); signup still enumerates; login timing (N4) open
 - [ ] Document WAF / CDN rate limits if used instead of app-level (Cloud Armor)

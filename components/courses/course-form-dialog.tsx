@@ -26,6 +26,7 @@ export type CourseFormValues = {
   hasOffline: boolean;
   onlinePrice: string;
   offlinePrice: string;
+  zoomLink: string;
 };
 
 const EMPTY: CourseFormValues = {
@@ -37,6 +38,7 @@ const EMPTY: CourseFormValues = {
   hasOffline: false,
   onlinePrice: "",
   offlinePrice: "",
+  zoomLink: "",
 };
 
 export function CourseFormDialog({
@@ -82,6 +84,7 @@ export function CourseFormDialog({
         hasOffline: form.hasOffline,
         onlinePrice: form.hasOnline ? Number(form.onlinePrice) : null,
         offlinePrice: form.hasOffline ? Number(form.offlinePrice) : null,
+        zoomLink: form.zoomLink.trim() || null,
       };
       const res =
         mode === "create"
@@ -115,7 +118,9 @@ export function CourseFormDialog({
             <DialogTitle>
               {mode === "create" ? "Add course" : "Edit course"}
             </DialogTitle>
-            <DialogDescription>All fields are required.</DialogDescription>
+            <DialogDescription>
+              All fields are required except the Zoom link.
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={onSubmit} className="space-y-4">
             <Field label="Title" htmlFor="title">
@@ -178,6 +183,15 @@ export function CourseFormDialog({
                 onPriceChange={(value) => set("offlinePrice", value)}
               />
             </div>
+            <Field label="Zoom link (optional)" htmlFor="zoomLink">
+              <Input
+                id="zoomLink"
+                type="url"
+                value={form.zoomLink}
+                onChange={(e) => set("zoomLink", e.target.value)}
+                placeholder="https://zoom.us/j/..."
+              />
+            </Field>
             {error ? <p className="text-destructive text-sm">{error}</p> : null}
             <DialogFooter>
               <Button

@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { auth, signIn, signOut } from "@/lib/auth";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
+import { safeRedirect } from "@/lib/auth/safe-redirect";
 import { ROLE_HOME } from "@/lib/constants";
 import { prisma } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
@@ -32,7 +33,17 @@ export type MessageFormState =
 const RegisterSchema = z.object({
   name: z.string().trim().max(120).optional(),
   email: z.email("Enter a valid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  // bcrypt only hashes the first 72 bytes; reject longer so the ignored tail
+  // never gives a false sense of strength (A8 / N5).
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(72, "Password must be at most 72 characters"),
+});
+
+const LoginSchema = z.object({
+  email: z.email("Enter a valid email address"),
+  password: z.string().min(1, "Password is required").max(72),
 });
 
 export async function registerUser(
@@ -90,13 +101,19 @@ export async function loginWithCredentials(
   _prev: AuthFormState,
   formData: FormData,
 ): Promise<AuthFormState> {
-  const email = formData.get("email") as string | null;
-  const password = formData.get("password") as string | null;
-  const explicitRedirect = (formData.get("redirectTo") as string) || null;
-
-  if (!email || !password) {
+  const parsed = LoginSchema.safeParse({
+    email: formData.get("email"),
+    password: formData.get("password"),
+  });
+  if (!parsed.success) {
     return { error: "Email and password are required." };
   }
+  const { email, password } = parsed.data;
+  // Only same-site paths are honored; external/scheme redirects are dropped.
+  const explicitRedirect = safeRedirect(
+    formData.get("redirectTo") as string | null,
+    "",
+  );
 
   const ip = await clientIp();
   const limit = await rateLimit(`login:ip:${ip}`, RATE_LIMITS.login);
@@ -134,7 +151,10 @@ export async function loginWithCredentials(
 }
 
 export async function signInWithGoogle(formData: FormData) {
-  const redirectTo = (formData.get("redirectTo") as string) || ROLE_HOME.USER;
+  const redirectTo = safeRedirect(
+    formData.get("redirectTo") as string | null,
+    ROLE_HOME.USER,
+  );
   await signIn("google", { redirectTo });
 }
 
@@ -227,7 +247,8 @@ export async function requestPasswordReset(
     await sendEmail({ to: email, ...passwordResetEmail(resetUrl) });
     log.info({ userId: user.id }, "password reset requested");
   } else {
-    log.info({ email }, "password reset requested for unknown/OAuth account");
+    // No PII in logs — the address is untrusted input and may not be a user.
+    log.info("password reset requested for unknown/OAuth account");
   }
 
   // Uniform response regardless of whether an email was actually sent.
@@ -254,10 +275,14 @@ export async function resetPassword(
   }
   await prisma.user.update({
     where: { id: userId },
-    data: { passwordHash: await hashPassword(parsed.data) },
+    // Bumping sessionVersion revokes every outstanding token (the whole point
+    // of a reset: lock out anyone holding the old session). See lib/auth jwt.
+    data: {
+      passwordHash: await hashPassword(parsed.data),
+      sessionVersion: { increment: 1 },
+    },
   });
   log.info({ userId }, "password reset completed");
-  // TODO: invalidate other active sessions once session versioning lands (#01).
   redirect("/login?reset=1");
 }
 
@@ -287,10 +312,14 @@ export async function changePassword(
   }
   await prisma.user.update({
     where: { id: user.id },
-    data: { passwordHash: await hashPassword(parsed.data) },
+    // Revoke all outstanding tokens (including this one — the user re-signs in
+    // with the new password). Locks out anyone holding an old session.
+    data: {
+      passwordHash: await hashPassword(parsed.data),
+      sessionVersion: { increment: 1 },
+    },
   });
   log.info({ userId: user.id }, "password changed");
-  // TODO: invalidate other active sessions once session versioning lands (#01).
   return { done: true };
 }
 

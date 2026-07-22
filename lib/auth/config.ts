@@ -24,9 +24,15 @@ export const authConfig = {
   providers,
   callbacks: {
     jwt({ token, user }) {
+      // Sign-in: seed the token from the DB user. On the Edge (middleware) this
+      // is the only jwt logic; the Node config in lib/auth/index.ts overrides
+      // this callback to additionally re-validate the token against the DB on
+      // every request (role refresh + sessionVersion revocation).
       if (user) {
         token.id = user.id as string;
         token.role = (user as { role?: RoleValue }).role ?? "USER";
+        token.sessionVersion =
+          (user as { sessionVersion?: number }).sessionVersion ?? 0;
       }
       return token;
     },

@@ -12,6 +12,21 @@ at that date; no code had been changed then.
 > docs ([01](./01-auth-jwt-role.md), [02](./02-rate-limiting.md)) rather than
 > duplicated here. The N1/N2/N-detail *narrative* sections further down are left
 > as the original audit record.
+>
+> **Update log — 2026-07-22:** a second remediation pass landed the remaining
+> HIGH/MEDIUM code items. Now done: stale-JWT role refresh + `sessionVersion`
+> session revocation (01), native `/api/auth` rate-limit path + N4/N5 +
+> `redirectTo` allowlist (02), refund relabeled **ledger-only** + N7 (03),
+> webhook currency/amount/double-pay flagging + N8 (03), security headers (04,
+> CSP still deferred), `https:` URL restriction (06), referral-click Zod +
+> IP limit (08), N6 referral hygiene, N9, log-PII redaction, dev DB loopback
+> binding (05), CI `pnpm audit` + Dependabot (09), admin-demotion + session
+> revocation (Z6), and the `RateLimit` cleanup cron (N11). Still open (all
+> ops/config): N2, N10, signup enumeration (R4), CSP enforcement, and the
+> deploy-checklist items (`SKIP_ENV_VALIDATION`, `trustHost` proxy, HTTPS, plus
+> a daily Scheduler trigger for `/api/cron/cleanup-rate-limits`). Requires a DB
+> migration — see
+> `prisma/migrations/20260722120000_add_session_version_and_payment_anomaly`.
 
 ---
 
@@ -34,10 +49,10 @@ carry over from the 2026-07-10 checklist and link to their fix notes.
 ### P0 — before any real users / real money
 
 - [x] **[new] N1 — Stop promoting unverified accounts to ADMIN.** — **DONE 2026-07-16.** `assignAdmin` now direct-promotes only an existing account whose email is already verified (control proven by #1); every other case (no account / unverified) goes through the email-bound invite, and `acceptAdminInvite` additionally requires `emailVerified`. Invite is emailed via SMTP (link no longer returned). Audit gains an `existingAccount` flag.
-- [ ] **Refresh role from DB / force re-login on role change** (stale JWT role) → [01-auth-jwt-role.md](./01-auth-jwt-role.md) — still open; password reset/change now also depend on this (session invalidation, see 01 Problem 5).
-- [ ] **Rate-limit login, signup, and the credentials `authorize` path** → [02-rate-limiting.md](./02-rate-limiting.md) — **PARTIAL 2026-07-16.** Action-level limits done (login 10/min, signup 5/min, per IP; Postgres-backed). **Residual:** the native `/api/auth/callback/credentials` path still bypasses it — move the limit into `authorize`. See 02.
-- [ ] **Wire manual refunds to real Stripe Refunds** (or clearly label the ledger-only behavior) → [03-payments-stripe.md](./03-payments-stripe.md)
-- [ ] **Production DB: strong unique credentials + never bind 5432 publicly** → [05-database-docker.md](./05-database-docker.md)
+- [x] **Refresh role from DB / force re-login on role change** (stale JWT role) → [01-auth-jwt-role.md](./01-auth-jwt-role.md) — **DONE 2026-07-22.** Node `jwt` callback re-reads role from DB every request and compares `sessionVersion`; a mismatch returns null (signs out). Password reset/change bump `sessionVersion`. **Residual:** no in-app admin-demotion action yet (Z6).
+- [x] **Rate-limit login, signup, and the credentials `authorize` path** → [02-rate-limiting.md](./02-rate-limiting.md) — **DONE 2026-07-22** (residual #1). Limit now lives inside the Auth.js `authorize` callback (shares the `login:ip` bucket), covering the native `/api/auth/callback/credentials` POST. **Residual:** stale-row cleanup (N11), signup enumeration (R4).
+- [x] **Wire manual refunds to real Stripe Refunds** (or clearly label the ledger-only behavior) → [03-payments-stripe.md](./03-payments-stripe.md) — **DONE 2026-07-22** as **ledger-only** (product decision): `recordManualRefund` documented + UI relabeled "Record ledger adjustment" with a "does not return money — issue in Stripe" warning; N7 amount validation added. The actual refund is issued in the Stripe Dashboard.
+- [ ] **Production DB: strong unique credentials + never bind 5432 publicly** → [05-database-docker.md](./05-database-docker.md) — **PARTIAL 2026-07-22.** Dev compose now binds `127.0.0.1` only + warning comment. Production credentials/managed-DB remain ops.
 
 ### P1 — hardening before public launch
 
@@ -47,26 +62,26 @@ carry over from the 2026-07-10 checklist and link to their fix notes.
   - Keep `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` **unset** in any non-dev deployment until launch — the code already hides the Google button when they are absent, so this is pure configuration.
   - In the GCP project IAM, grant roles only to developer accounts (no domain-wide or "allUsers" grants); the OAuth client secret lives only in `.env` / the host secret store.
   - When later opening to the public, restrict the OAuth client's authorized redirect URIs to the production domain only.
-- [ ] **Security headers** (CSP, HSTS, `X-Frame-Options`/`frame-ancestors`, `Referrer-Policy`, `nosniff`) in `next.config.ts` → [04-security-headers.md](./04-security-headers.md)
-- [ ] **Webhook amount reconciliation + double-payment guard** → [03-payments-stripe.md](./03-payments-stripe.md)
-  - [ ] **[new] N8 (extends P6):** make the `amount_total / 100` conversion currency-aware (zero-decimal currencies) and reject/flag events whose `currency` doesn't match the enrollment's `currency`.
-- [ ] **Restrict `videoUrl` to `https:` URLs** in `SectionFormSchema` → [06-input-validation-xss.md](./06-input-validation-xss.md)
+- [x] **Security headers** (`X-Frame-Options`, `Referrer-Policy`, `nosniff`, `Permissions-Policy`, prod HSTS) in `next.config.ts` → [04-security-headers.md](./04-security-headers.md) — **PARTIAL 2026-07-22.** Baseline headers shipped. **Residual:** enforced CSP deferred (needs Stripe/Google tuning + staging verification).
+- [x] **Webhook amount reconciliation + double-payment guard** → [03-payments-stripe.md](./03-payments-stripe.md) — **DONE 2026-07-22.** `recordPayment` flags currency mismatch, amount-vs-net divergence, and a second payment on an already-paid enrollment (audit `PAYMENT_ANOMALY` + error log); records faithfully since the money already moved, ops refunds duplicates manually.
+  - [x] **[new] N8 (extends P6):** currency-aware conversion via `lib/payments/currency.ts` (zero-decimal set) and currency-match check in `recordPayment`.
+- [x] **Restrict `videoUrl` to `https:` URLs** in `SectionFormSchema` → [06-input-validation-xss.md](./06-input-validation-xss.md) — **DONE 2026-07-22** (also `zoomLink` / `ZoomLinkSchema`; `http://localhost` allowed for dev).
 - [x] **[new] N3 — Add a password change + reset flow.** — **DONE 2026-07-16** (except session revocation). `requestPasswordReset` (uniform response, rate-limited by IP + email, credential accounts only) → `/reset/[token]` → `resetPassword`; `changePassword` (requires current password) on `/my/info`. Uses the `PASSWORD_RESET` `UserToken` (SHA-256, 1h TTL, single-use). **Residual:** does not yet revoke other active sessions — depends on session versioning → [01-auth-jwt-role.md](./01-auth-jwt-role.md) Problem 5.
-- [ ] **Referral click endpoint: IP+code rate limit, Zod body validation, generic responses** → [08-referral-api.md](./08-referral-api.md)
-- [ ] **CI: `pnpm audit` + Dependabot/Renovate; track `next-auth` beta advisories** → [09-dependencies.md](./09-dependencies.md)
+- [x] **Referral click endpoint: IP+code rate limit, Zod body validation, generic responses** → [08-referral-api.md](./08-referral-api.md) — **DONE 2026-07-22.** Zod body + per-IP limit (30/min). **Residual:** still returns `{valid}` (LOW oracle, T3) since the client needs it.
+- [x] **CI: `pnpm audit` + Dependabot/Renovate; track `next-auth` beta advisories** → [09-dependencies.md](./09-dependencies.md) — **DONE 2026-07-22.** `.github/workflows/security-audit.yml` (`pnpm audit --prod --audit-level=high`, PR + weekly) and `.github/dependabot.yml`.
 
 ### P2 — defense-in-depth / hygiene
 
-- [ ] **[new] N4 — Uniform-time credentials login.** In `lib/auth/index.ts#authorize`, run a bcrypt compare against a static dummy hash when the user is not found or has no `passwordHash`, so both branches cost the same (complements R4 in [02-rate-limiting.md](./02-rate-limiting.md)).
-- [ ] **[new 2026-07-16] N11 — `RateLimit` stale-row cleanup.** The rate limiter (`lib/rate-limit.ts`, `RateLimit` table) never deletes rows for keys that stop recurring → unbounded growth. Add a periodic `DELETE ... WHERE "windowEnd" < now()` (Cloud Scheduler → protected route, or `pg_cron`). → [02-rate-limiting.md](./02-rate-limiting.md) residual #2.
-- [ ] **[new] N5 — Zod-validate the login / Google sign-in form data.** `loginWithCredentials` and `signInWithGoogle` read `FormData` with raw casts; validate email format, password max length (≤ 72 bytes for bcrypt), and `redirectTo` shape the same way `registerUser` does.
-- [ ] **`redirectTo` allowlist** (accept only same-site paths starting with a single `/`) applied in one shared helper used by login, signup, and invite pages → [01-auth-jwt-role.md](./01-auth-jwt-role.md)
-- [ ] **[new] N6 — Referral code hygiene.** In `lib/referral/*`: enforce case-insensitive uniqueness (store a normalized column or lowercase on write/lookup), add a reserved-word blocklist (`admin`, `cstu`, `official`, staff names, …) for user-chosen codes, and decide a retention policy for old codes — they currently stay valid forever and accumulate without bound (3 new codes/day/user).
-- [ ] **[new] N7 — Validate refund amounts as finite numbers.** `recordManualRefund` passes a raw client-supplied `number` into `recordRefund`; a `NaN` slips past both guard comparisons and only fails at the DB layer. Add a Zod check (`z.number().finite().positive().max(…)`) at the action boundary.
-- [ ] **[new] N9 — Align `EnrollSchema.snapshotEmail` with `ProfileSchema.preferredEmail`** (email-format refine); today any ≤200-char string is accepted.
+- [x] **[new] N4 — Uniform-time credentials login.** — **DONE 2026-07-22.** `authorize` always runs one bcrypt compare against `DUMMY_PASSWORD_HASH` when the user/password is absent.
+- [x] **[new 2026-07-16] N11 — `RateLimit` stale-row cleanup.** — **DONE 2026-07-22.** `cleanupRateLimits()` + protected route `/api/cron/cleanup-rate-limits` (Bearer `CRON_SECRET`, fails closed). **Ops:** add a daily Cloud Scheduler trigger. → [02-rate-limiting.md](./02-rate-limiting.md) residual #2.
+- [x] **[new] N5 — Zod-validate the login / Google sign-in form data.** — **DONE 2026-07-22.** `LoginSchema` (email + password ≤72) in `loginWithCredentials`, `CredentialsSchema` in `authorize`, and `safeRedirect` on both `loginWithCredentials` and `signInWithGoogle`.
+- [x] **`redirectTo` allowlist** (accept only same-site paths starting with a single `/`) → [01-auth-jwt-role.md](./01-auth-jwt-role.md) — **DONE 2026-07-22.** Shared `lib/auth/safe-redirect.ts`.
+- [x] **[new] N6 — Referral code hygiene.** — **DONE 2026-07-22.** Reserved-word blocklist (`isReservedReferralCode`) + case-insensitive uniqueness check on write (`findFirst … mode: "insensitive"`). **Residual:** retention policy left as-is (old codes intentionally stay valid so shared links don't break); DB-level case-insensitive unique index deferred.
+- [x] **[new] N7 — Validate refund amounts as finite numbers.** — **DONE 2026-07-22.** `RefundAmountSchema` (`z.number().finite().positive().max(1_000_000)`) at the action boundary.
+- [x] **[new] N9 — Align `EnrollSchema.snapshotEmail` with `ProfileSchema.preferredEmail`** — **DONE 2026-07-22** via shared `optionalEmail()` refine.
 - [ ] **[new] N10 — Seed-script guardrails (ops).** `prisma/seed.ts` upserts by `SUPERADMIN_EMAIL` and force-sets `role: SUPER_ADMIN` on every run — document that pointing this env var at an existing user's email promotes that account, and remove/rotate `SUPERADMIN_PASSWORD` from the environment after the initial seed.
-- [ ] **Admin demotion / session-revocation path** (pairs with the stale-JWT fix) → [01-auth-jwt-role.md](./01-auth-jwt-role.md)
-- [ ] **Redact email PII from info-level logs** → [00-secrets-and-env.md](./00-secrets-and-env.md) — `registerUser` was switched to log `userId` (2026-07-16), but the new auth/email code adds fresh raw-email logs (`requestPasswordReset` OAuth/unknown branch, `assignAdmin`). Address as a group: log user ids or hashed emails.
+- [x] **Admin demotion / session-revocation path** — **DONE 2026-07-22.** `demoteAdmin(adminId)` (SUPER_ADMIN only) sets role→USER, deletes all course assignments, bumps `sessionVersion`, audits `ROLE_CHANGE`. UI: "Revoke admin" (site-wide) button per admin + a prompt when `unassignAdmin` leaves an admin with no courses (no auto-demote). → [01-auth-jwt-role.md](./01-auth-jwt-role.md)
+- [x] **Redact email PII from info-level logs** → [00-secrets-and-env.md](./00-secrets-and-env.md) — **DONE 2026-07-22.** Dropped raw email from `requestPasswordReset` (unknown/OAuth branch) and `assignAdmin` info logs; audit rows (intentional records) keep the email.
 - [ ] **Deploy checklist: `SKIP_ENV_VALIDATION` unset in production; secrets from a secret store** → [00-secrets-and-env.md](./00-secrets-and-env.md)
 - [ ] **Production runs behind a trusted reverse proxy** (required by `trustHost: true`) with HTTPS enforced → [01-auth-jwt-role.md](./01-auth-jwt-role.md), [04-security-headers.md](./04-security-headers.md)
 

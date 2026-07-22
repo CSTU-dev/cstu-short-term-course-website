@@ -1,6 +1,9 @@
 # Fix area: Dependencies & supply chain
 
-**Status:** RISK / GAP  
+**Status:** **FIXED (2026-07-22)** for the CI gap — `.github/workflows/security-audit.yml`
+runs `pnpm audit --prod --audit-level=high` on PRs, pushes to main, and weekly;
+`.github/dependabot.yml` opens weekly update PRs (npm + actions). **Residual:**
+`next-auth` beta remains a RISK to track; the `shadcn` runtime-dep review is open.  
 **Severity:** MEDIUM  
 **Related checklist IDs:** Dep1–Dep3  
 **Key files:** `package.json`, `pnpm-lock.yaml`
@@ -28,6 +31,6 @@ Lockfile is present (good). Prefer `pnpm install --frozen-lockfile` in CI.
 
 ## Acceptance criteria
 
-- [ ] Automated vulnerability scanning in CI
-- [ ] Process to patch Auth.js / Next / Stripe SDKs within a defined SLA
-- [ ] Production dependency set reviewed for unnecessary packages
+- [x] Automated vulnerability scanning in CI — 2026-07-22 (`security-audit.yml`)
+- [ ] Process to patch Auth.js / Next / Stripe SDKs within a defined SLA — Dependabot opens PRs; SLA still to be defined
+- [ ] Production dependency set reviewed for unnecessary packages — `shadcn` runtime dep still to review
