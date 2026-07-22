@@ -34,6 +34,7 @@ export default async function SuperAdminCourseDetailPage({
     onlinePrice: course.onlinePrice != null ? String(course.onlinePrice) : "",
     offlinePrice:
       course.offlinePrice != null ? String(course.offlinePrice) : "",
+    zoomLink: course.zoomLink ?? "",
   };
 
   const admins = course.assignments.map((a) => ({
@@ -93,6 +94,7 @@ export default async function SuperAdminCourseDetailPage({
               value={formatCurrency(Number(course.offlinePrice ?? 0))}
             />
           ) : null}
+          <Detail label="Zoom link" value={course.zoomLink ?? "—"} />
         </CardContent>
       </Card>
 

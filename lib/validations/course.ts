@@ -24,6 +24,7 @@ export const CourseFormSchema = z
     hasOffline: z.boolean(),
     onlinePrice: priceField,
     offlinePrice: priceField,
+    zoomLink: z.url("Enter a valid Zoom link").nullable(),
   })
   .refine((d) => d.endAt > d.startAt, {
     message: "End time must be after the start time",
@@ -43,6 +44,9 @@ export const CourseFormSchema = z
   });
 
 export type CourseInput = z.input<typeof CourseFormSchema>;
+
+/** Standalone Zoom link value (used by the admin's scoped editor). */
+export const ZoomLinkSchema = z.url("Enter a valid Zoom link").nullable();
 
 export const SectionFormSchema = z.object({
   title: z.string().trim().min(1, "Section title is required").max(200),

@@ -255,6 +255,9 @@ model Course {
   // Custom course detail page content (rich text / structured JSON placeholder)
   detailContent Json?
 
+  // Optional Zoom meeting link, visible to paid students on their course page.
+  zoomLink String?
+
   sections      Section[]
   assignments   CourseAssignment[]
   enrollments   Enrollment[]
