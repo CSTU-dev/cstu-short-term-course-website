@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 
 import type { PublicCourseDetail } from "@/lib/data/public.queries";
 
+import { DemoClassAiJobTrendingDetail } from "./demo-class-ai-job-trending";
 import { DemoDetail } from "./demo";
 
 /** Props every custom course detail template receives. */
@@ -21,5 +22,6 @@ export const customDetailPages: Record<
   string,
   ComponentType<CustomDetailProps>
 > = {
+  "demo-class-ai-job-trending": DemoClassAiJobTrendingDetail,
   demo: DemoDetail,
 };
