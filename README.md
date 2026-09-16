@@ -1,11 +1,6 @@
 CSTU Short Term Course Website
 
-## Warning
-
-- **DO NOT develop on the main branch**
-- **Check out a new branch before developing**
-- **Open a pull request for code review**
-- **Merge only after code review**
+https://short.cstu.cloud/
 
 ## Development
 
